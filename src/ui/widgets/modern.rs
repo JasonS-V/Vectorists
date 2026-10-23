@@ -1,10 +1,9 @@
-//! Shared controls use egui's focus, keyboard and accessibility semantics.
-//! Formatted according to the Premium Minimal Dark Dashboard design guide.
-use crate::ui::theme::colors;
+//! Shared native controls with keyboard focus and accessible names.
+use crate::ui::theme::{accent, accent_soft, colors};
 use eframe::egui::{self, Color32, Pos2, Sense, Stroke, Vec2};
 
 pub fn toggle_switch(ui: &mut egui::Ui, on: &mut bool, label: &str) -> egui::Response {
-    let (rect, mut response) = ui.allocate_exact_size(Vec2::new(42.0, 24.0), Sense::click());
+    let (rect, mut response) = ui.allocate_exact_size(Vec2::new(38.0, 22.0), Sense::click());
     if response.clicked() {
         *on = !*on;
         response.mark_changed();
@@ -14,64 +13,28 @@ pub fn toggle_switch(ui: &mut egui::Ui, on: &mut bool, label: &str) -> egui::Res
     });
     let t = ui.ctx().animate_bool(response.id, *on);
     ui.painter().rect_filled(
-        rect.shrink2(egui::vec2(0.0, 1.0)),
-        12,
+        rect,
+        11,
         if *on {
-            colors::ACCENT
+            accent(ui)
         } else {
             colors::PANEL_ELEVATED
         },
     );
-    if !*on {
-        ui.painter().rect_stroke(
-            rect.shrink2(egui::vec2(0.0, 1.0)),
-            12,
-            Stroke::new(1.0, colors::BORDER_STRONG),
-            egui::StrokeKind::Inside,
-        );
-    }
     ui.painter().circle_filled(
-        Pos2::new(rect.left() + 12.0 + t * 18.0, rect.center().y),
-        8.0,
-        if *on {
-            colors::CHASSIS_BG
-        } else {
-            colors::TEXT_PRIMARY
-        },
+        Pos2::new(rect.left() + 11.0 + t * 16.0, rect.center().y),
+        7.0,
+        colors::TEXT_PRIMARY,
     );
     if response.has_focus() {
         ui.painter().rect_stroke(
             rect.expand(3.0),
             14,
-            Stroke::new(2.0, colors::ACCENT),
+            Stroke::new(2.0, accent(ui)),
             egui::StrokeKind::Outside,
         );
     }
     response.on_hover_text(label)
-}
-
-pub fn metric_card(ui: &mut egui::Ui, width: f32, title: &str, value: &str, subtext: &str) {
-    card_container(ui, |ui| {
-        ui.set_width((width - 34.0).max(0.0));
-        ui.spacing_mut().item_spacing.y = 4.0;
-        ui.set_min_height(if width < 220.0 { 96.0 } else { 76.0 });
-        ui.label(
-            egui::RichText::new(title)
-                .size(12.0)
-                .color(colors::TEXT_SECONDARY),
-        );
-        ui.label(
-            egui::RichText::new(value)
-                .size(26.0)
-                .strong()
-                .color(colors::TEXT_PRIMARY),
-        );
-        ui.label(
-            egui::RichText::new(subtext)
-                .size(11.5)
-                .color(colors::TEXT_MUTED),
-        );
-    });
 }
 
 pub fn card_container<R>(
@@ -81,73 +44,185 @@ pub fn card_container<R>(
     egui::Frame::new()
         .fill(colors::PANEL_BG)
         .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
-        .corner_radius(14)
+        .corner_radius(12)
         .inner_margin(16)
         .show(ui, |ui| {
             ui.spacing_mut().item_spacing.y = 6.0;
-            ui.spacing_mut().interact_size.y = 24.0;
+            ui.spacing_mut().interact_size.y = 28.0;
             ui.with_layout(egui::Layout::top_down(egui::Align::Min), contents)
                 .inner
         })
 }
 
-pub fn pill_chip(ui: &mut egui::Ui, text: &str, active: bool, accent: Color32) -> bool {
-    ui.add(
-        egui::Button::new(egui::RichText::new(text).size(12.0).color(if active {
-            accent
+pub fn metric_card(
+    ui: &mut egui::Ui,
+    width: f32,
+    title: &str,
+    value: &str,
+    subtext: &str,
+    highlighted: bool,
+) {
+    let foreground = if highlighted {
+        colors::SIDEBAR_BG
+    } else {
+        colors::TEXT_PRIMARY
+    };
+    let secondary = if highlighted {
+        foreground
+    } else {
+        colors::TEXT_SECONDARY
+    };
+    egui::Frame::new()
+        .fill(if highlighted {
+            accent(ui)
         } else {
-            colors::TEXT_SECONDARY
-        }))
+            colors::PANEL_BG
+        })
+        .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
+        .corner_radius(12)
+        .inner_margin(egui::Margin::symmetric(18, 14))
+        .show(ui, |ui| {
+            ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
+                ui.set_width((width - 38.0).max(0.0));
+                ui.set_min_height(76.0);
+                ui.spacing_mut().item_spacing.y = 3.0;
+                ui.label(egui::RichText::new(title).size(12.0).color(secondary));
+                ui.label(egui::RichText::new(value).size(30.0).color(foreground));
+                ui.label(egui::RichText::new(subtext).size(11.0).color(secondary));
+            });
+        });
+}
+
+pub fn pill_chip(ui: &mut egui::Ui, text: &str, active: bool, tint: Color32) -> bool {
+    ui.add(
+        egui::Button::selectable(
+            active,
+            egui::RichText::new(text).size(12.0).color(if active {
+                tint
+            } else {
+                colors::TEXT_SECONDARY
+            }),
+        )
         .fill(if active {
-            colors::ACCENT_FAINT
+            Color32::from_rgba_unmultiplied(tint.r(), tint.g(), tint.b(), 24)
         } else {
             colors::PANEL_BG_LIGHT
         })
         .stroke(Stroke::new(
             1.0,
-            if active {
-                accent
-            } else {
-                colors::BORDER_SUBTLE
-            },
+            if active { tint } else { colors::BORDER_SUBTLE },
         ))
-        .corner_radius(16)
+        .corner_radius(7)
         .min_size(egui::vec2(0.0, 32.0)),
     )
     .clicked()
 }
 
+pub fn quick_preset_capsule(
+    ui: &mut egui::Ui,
+    width: f32,
+    title: &str,
+    subtext: &str,
+    glyph: &str,
+    active: bool,
+) -> bool {
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(width.max(0.0), 58.0), Sense::click());
+    response.widget_info(|| {
+        egui::WidgetInfo::selected(
+            egui::accesskit::Role::RadioButton,
+            ui.is_enabled(),
+            active,
+            title,
+        )
+    });
+    let p = ui.painter_at(rect);
+    p.rect_filled(
+        rect,
+        8,
+        if active {
+            accent_soft(ui)
+        } else if response.hovered() {
+            colors::PANEL_ELEVATED
+        } else {
+            colors::PANEL_BG_LIGHT
+        },
+    );
+    p.rect_stroke(
+        rect,
+        8,
+        Stroke::new(
+            if response.has_focus() { 2.0 } else { 1.0 },
+            if active || response.has_focus() {
+                accent(ui)
+            } else {
+                colors::BORDER_SUBTLE
+            },
+        ),
+        egui::StrokeKind::Inside,
+    );
+    let icon = Pos2::new(rect.left() + 20.0, rect.center().y);
+    p.text(
+        icon,
+        egui::Align2::CENTER_CENTER,
+        glyph,
+        egui::FontId::proportional(20.0),
+        if active {
+            accent(ui)
+        } else {
+            colors::TEXT_MUTED
+        },
+    );
+    p.text(
+        rect.left_top() + egui::vec2(40.0, 19.0),
+        egui::Align2::LEFT_CENTER,
+        title,
+        egui::FontId::proportional(12.0),
+        colors::TEXT_PRIMARY,
+    );
+    p.text(
+        rect.left_top() + egui::vec2(40.0, 39.0),
+        egui::Align2::LEFT_CENTER,
+        subtext,
+        egui::FontId::proportional(10.5),
+        colors::TEXT_SECONDARY,
+    );
+    response
+        .on_hover_text(format!("Aplicar plantilla {title}: {subtext}"))
+        .clicked()
+}
+
 pub fn primary_button(ui: &mut egui::Ui, text: &str) -> egui::Response {
     ui.add(
-        egui::Button::new(
-            egui::RichText::new(text)
-                .strong()
-                .color(Color32::from_rgb(23, 21, 30)),
-        )
-        .fill(colors::ACCENT)
-        .corner_radius(10)
-        .stroke(Stroke::NONE)
-        .min_size(egui::vec2(0.0, 38.0)),
+        egui::Button::new(egui::RichText::new(text).strong().color(colors::SIDEBAR_BG))
+            .fill(accent(ui))
+            .corner_radius(8)
+            .stroke(Stroke::NONE)
+            .min_size(egui::vec2(0.0, 36.0)),
     )
 }
 
 pub fn secondary_button(ui: &mut egui::Ui, text: &str) -> egui::Response {
     ui.add(
         egui::Button::new(egui::RichText::new(text).color(colors::TEXT_PRIMARY))
-            .fill(colors::PANEL_ELEVATED)
-            .corner_radius(10)
-            .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
-            .min_size(egui::vec2(0.0, 38.0)),
+            .fill(colors::PANEL_BG_LIGHT)
+            .corner_radius(8)
+            .stroke(Stroke::new(1.0, colors::BORDER_STRONG))
+            .min_size(egui::vec2(0.0, 36.0)),
     )
 }
 
 pub fn section_heading(ui: &mut egui::Ui, title: &str, subtitle: &str) {
-    ui.label(egui::RichText::new(title).size(16.5).strong().color(colors::TEXT_PRIMARY));
+    ui.label(
+        egui::RichText::new(title)
+            .size(16.0)
+            .strong()
+            .color(colors::TEXT_PRIMARY),
+    );
     if !subtitle.is_empty() {
         ui.label(
             egui::RichText::new(subtitle)
-                .size(12.5)
-                .color(colors::TEXT_MUTED),
+                .size(12.0)
+                .color(colors::TEXT_SECONDARY),
         );
     }
 }
@@ -173,7 +248,7 @@ pub fn direction_micro_bar(
                     ),
                 )
                 .clicked();
-            ui.spacing_mut().slider_width = (ui.available_width() - 68.0).max(40.0);
+            ui.spacing_mut().slider_width = (ui.available_width() - 70.0).max(40.0);
             changed = ui
                 .add(
                     egui::Slider::new(value, 0.5..=1.5)
@@ -189,9 +264,9 @@ pub fn direction_micro_bar(
                     .monospace()
                     .size(11.0)
                     .color(if selected {
-                        colors::ACCENT
+                        accent(ui)
                     } else {
-                        colors::TEXT_MUTED
+                        colors::TEXT_SECONDARY
                     }),
             );
         });
@@ -213,91 +288,91 @@ pub fn nav_item(
     active: bool,
     compact: bool,
 ) -> bool {
-    let height = 44.0;
-    let (rect, response) = ui.allocate_exact_size(egui::vec2(ui.available_width(), height), Sense::click());
+    let (rect, response) =
+        ui.allocate_exact_size(egui::vec2(ui.available_width(), 46.0), Sense::click());
     response.widget_info(|| {
         egui::WidgetInfo::selected(egui::accesskit::Role::Tab, ui.is_enabled(), active, label)
     });
-    let painter = ui.painter();
-    let is_hovered = response.hovered();
-
-    // Background fill based on state
-    let bg_color = if active {
-        colors::PANEL_BG
-    } else if is_hovered {
-        colors::PANEL_BG_LIGHT
-    } else {
-        Color32::TRANSPARENT
-    };
-
-    if bg_color != Color32::TRANSPARENT {
-        painter.rect_filled(rect, 10, bg_color);
+    let p = ui.painter();
+    if active || response.hovered() {
+        p.rect_filled(
+            rect,
+            8,
+            if active {
+                accent_soft(ui)
+            } else {
+                colors::PANEL_BG
+            },
+        );
     }
-    if active {
-        painter.rect_stroke(rect, 10, Stroke::new(1.0, colors::BORDER_SUBTLE), egui::StrokeKind::Inside);
+    if response.has_focus() {
+        p.rect_stroke(
+            rect,
+            8,
+            Stroke::new(1.5, accent(ui)),
+            egui::StrokeKind::Inside,
+        );
     }
-
     let color = if active {
-        colors::ACCENT
-    } else if is_hovered {
-        colors::TEXT_PRIMARY
+        accent(ui)
     } else {
         colors::TEXT_SECONDARY
     };
-
     let c = Pos2::new(
-        rect.left()
-            + if compact {
-                rect.width() * 0.5
-            } else {
-                24.0
-            },
+        if compact {
+            rect.center().x
+        } else {
+            rect.left() + 22.0
+        },
         rect.center().y,
     );
-    let stroke = Stroke::new(1.6, color);
+    let stroke = Stroke::new(1.5, color);
     match icon {
-        NavIcon::Polar | NavIcon::Target => {
-            painter.circle_stroke(c, 8.0, stroke);
-            painter.circle_stroke(c, 3.0, stroke);
-            if matches!(icon, NavIcon::Polar) {
-                painter.line_segment([c, c + egui::vec2(8.5, -8.5)], stroke);
-            } else {
-                painter.line_segment(
-                    [c - egui::vec2(10.0, 0.0), c + egui::vec2(10.0, 0.0)],
+        NavIcon::Polar => {
+            for offset in [
+                egui::vec2(-5.0, -5.0),
+                egui::vec2(5.0, -5.0),
+                egui::vec2(-5.0, 5.0),
+                egui::vec2(5.0, 5.0),
+            ] {
+                p.rect_stroke(
+                    egui::Rect::from_center_size(c + offset, Vec2::splat(6.0)),
+                    1,
                     stroke,
+                    egui::StrokeKind::Inside,
                 );
-                painter.line_segment(
-                    [c - egui::vec2(0.0, 10.0), c + egui::vec2(0.0, 10.0)],
-                    stroke,
-                );
+            }
+        }
+        NavIcon::Target => {
+            p.circle_stroke(c, 8.0, stroke);
+            p.circle_stroke(c, 3.0, stroke);
+            for dir in [
+                egui::vec2(1.0, 0.0),
+                egui::vec2(-1.0, 0.0),
+                egui::vec2(0.0, 1.0),
+                egui::vec2(0.0, -1.0),
+            ] {
+                p.line_segment([c + dir * 6.0, c + dir * 11.0], stroke);
             }
         }
         NavIcon::Settings => {
             for (x, offset) in [(-7.0, -4.0), (0.0, 4.0), (7.0, -1.0)] {
-                painter.line_segment([c + egui::vec2(x, -9.0), c + egui::vec2(x, 9.0)], stroke);
-                painter.circle_filled(c + egui::vec2(x, offset), 2.5, color);
+                p.line_segment([c + egui::vec2(x, -9.0), c + egui::vec2(x, 9.0)], stroke);
+                p.circle_filled(c + egui::vec2(x, offset), 2.5, color);
             }
         }
     }
     if !compact {
-        painter.text(
-            Pos2::new(rect.left() + 48.0, c.y),
+        p.text(
+            Pos2::new(rect.left() + 46.0, c.y),
             egui::Align2::LEFT_CENTER,
             label,
-            egui::FontId::proportional(14.0),
+            egui::FontId::proportional(13.5),
             if active { colors::TEXT_PRIMARY } else { color },
         );
-    }
-    if active {
-        // Left active pill indicator
-        painter.rect_filled(
-            egui::Rect::from_min_size(
-                rect.left_top() + egui::vec2(0.0, 10.0),
-                egui::vec2(3.0, rect.height() - 20.0),
-            ),
-            2,
-            colors::ACCENT,
-        );
+        if active {
+            p.circle_filled(Pos2::new(rect.right() - 14.0, c.y), 2.5, accent(ui));
+        }
     }
     response.on_hover_text(label).clicked()
 }

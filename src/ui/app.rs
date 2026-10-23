@@ -1,9 +1,9 @@
 //! Native workspace shell, profile switching and persistent status.
 use crate::core::profile::ProfileManager;
 use crate::input::{RawInputListener, SensorTelemetry};
-use crate::ui::theme::{apply_theme, apply_theme_with_accent, colors, ThemeAccent};
+use crate::ui::theme::{ThemeAccent, accent, apply_theme, apply_theme_with_accent, colors};
 use crate::ui::views::{CalibratorView, DashboardView, SettingsView};
-use crate::ui::widgets::{nav_item, primary_button, toggle_switch, NavIcon};
+use crate::ui::widgets::{NavIcon, nav_item, primary_button, secondary_button, toggle_switch};
 use eframe::egui::{self, Frame, Stroke};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -81,18 +81,19 @@ impl VectoristsApp {
     }
 
     fn sidebar(&mut self, ui: &mut egui::Ui, compact: bool) {
-        ui.add_space(12.0);
+        ui.add_space(4.0);
         ui.horizontal(|ui| {
-            let (rect, _) = ui.allocate_exact_size(egui::vec2(32.0, 36.0), egui::Sense::hover());
+            let (rect, _) = ui.allocate_exact_size(egui::vec2(38.0, 38.0), egui::Sense::hover());
             let c = rect.center();
             let p = ui.painter();
+            p.rect_filled(rect, 10, accent(ui));
             p.line_segment(
                 [c + egui::vec2(-12.0, -10.0), c + egui::vec2(0.0, 11.0)],
-                Stroke::new(3.0, colors::ACCENT),
+                Stroke::new(2.5, colors::SIDEBAR_BG),
             );
             p.line_segment(
                 [c + egui::vec2(0.0, 11.0), c + egui::vec2(12.0, -10.0)],
-                Stroke::new(3.0, colors::ACCENT),
+                Stroke::new(2.5, colors::SIDEBAR_BG),
             );
             p.line_segment(
                 [c + egui::vec2(0.0, -5.0), c + egui::vec2(5.0, -14.0)],
@@ -101,13 +102,13 @@ impl VectoristsApp {
             if !compact {
                 ui.label(
                     egui::RichText::new("vectorists")
-                        .size(20.0)
+                        .size(22.0)
                         .strong()
                         .color(colors::TEXT_PRIMARY),
                 );
             }
         });
-        ui.add_space(28.0);
+        ui.add_space(32.0);
         if !compact {
             ui.label(
                 egui::RichText::new("ESPACIO DE TRABAJO")
@@ -117,7 +118,7 @@ impl VectoristsApp {
             ui.add_space(6.0);
         }
         for (tab, label, icon) in [
-            (ActiveTab::Dashboard, "Mapa polar", NavIcon::Polar),
+            (ActiveTab::Dashboard, "Vista general", NavIcon::Polar),
             (ActiveTab::Calibrator, "Calibración", NavIcon::Target),
             (ActiveTab::Settings, "Configuración", NavIcon::Settings),
         ] {
@@ -125,45 +126,38 @@ impl VectoristsApp {
                 self.active_tab = tab;
             }
         }
-        ui.add_space((ui.available_height() - if compact { 30.0 } else { 218.0 }).max(12.0));
+        ui.add_space((ui.available_height() - if compact { 30.0 } else { 270.0 }).max(12.0));
         if !compact {
-            Frame::new()
-                .fill(colors::PANEL_BG)
-                .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
-                .corner_radius(12)
-                .inner_margin(16)
-                .show(ui, |ui| {
-                    ui.set_width(ui.available_width());
-                    ui.label(
-                        egui::RichText::new("Hecho para tu forma\nde apuntar.")
-                            .size(14.0)
-                            .strong()
-                            .color(colors::TEXT_PRIMARY),
-                    );
-                    ui.add_space(2.0);
-                    ui.label(
-                        egui::RichText::new("16 direcciones. Una curva\nque se adapta a ti.")
-                            .size(12.0)
-                            .color(colors::TEXT_MUTED),
-                    );
-                    ui.add_space(8.0);
-                    if ui
-                        .add(
-                            egui::Button::new(
-                                egui::RichText::new("Calibrar mi ratón  →")
-                                    .size(12.0)
-                                    .color(colors::ACCENT),
-                            )
-                            .fill(colors::PANEL_BG_LIGHT)
-                            .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
-                            .corner_radius(8),
-                        )
-                        .clicked()
-                    {
-                        self.active_tab = ActiveTab::Calibrator;
-                    }
-                });
-            ui.add_space(14.0);
+            ui.label(
+                egui::RichText::new("HECHO PARA TU MOVIMIENTO")
+                    .size(10.0)
+                    .color(colors::TEXT_MUTED),
+            );
+            ui.add_space(4.0);
+            ui.label(
+                egui::RichText::new("Tu precisión empieza aquí.")
+                    .size(16.0)
+                    .color(colors::TEXT_PRIMARY),
+            );
+            ui.label(
+                egui::RichText::new(
+                    "Calibra 16 direcciones y encuentra una respuesta a tu medida.",
+                )
+                .size(12.0)
+                .color(colors::TEXT_MUTED),
+            );
+            ui.add_space(8.0);
+            if secondary_button(ui, "Calibrar mi ratón  →").clicked() {
+                self.active_tab = ActiveTab::Calibrator;
+            }
+            ui.add_space(20.0);
+            ui.separator();
+            ui.add_space(8.0);
+            ui.label(
+                egui::RichText::new("●  Windows · Raw Input")
+                    .size(11.0)
+                    .color(colors::TEXT_SECONDARY),
+            );
         }
         ui.label(
             egui::RichText::new(if compact {
@@ -180,7 +174,8 @@ impl VectoristsApp {
         ui.horizontal_wrapped(|ui| {
             let mut index = self.profile_manager.active_index;
             egui::ComboBox::from_id_salt("active-profile")
-                .width(210.0)
+                .width(190.0)
+                .truncate()
                 .selected_text(&self.profile_manager.active_profile().name)
                 .show_ui(ui, |ui| {
                     for (i, profile) in self.profile_manager.profiles().iter().enumerate() {
@@ -192,7 +187,7 @@ impl VectoristsApp {
             if index != self.profile_manager.active_index {
                 self.profile_manager.set_active(index);
             }
-            if primary_button(ui, "Guardar cambios")
+            if primary_button(ui, "Guardar perfil")
                 .on_hover_text("Guardar todos los perfiles · Ctrl+S")
                 .clicked()
             {
@@ -278,7 +273,7 @@ impl VectoristsApp {
                 });
             });
         egui::Panel::left("navigation")
-            .exact_size(if compact { 68.0 } else { 224.0 })
+            .exact_size(if compact { 76.0 } else { 216.0 })
             .resizable(false)
             .frame(
                 Frame::new()
@@ -296,9 +291,16 @@ impl VectoristsApp {
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(
-                        egui::RichText::new("CONTROL DE PRECISIÓN")
-                            .size(10.5)
-                            .color(colors::TEXT_MUTED),
+                        egui::RichText::new(
+                            "Espacio de trabajo  /  ".to_owned()
+                                + match self.active_tab {
+                                    ActiveTab::Dashboard => "Vista general",
+                                    ActiveTab::Calibrator => "Calibración",
+                                    ActiveTab::Settings => "Configuración",
+                                },
+                        )
+                        .size(10.5)
+                        .color(colors::TEXT_MUTED),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         let profile = self.profile_manager.active_profile_mut();
@@ -315,17 +317,18 @@ impl VectoristsApp {
                             })
                             .size(12.5)
                             .color(if profile.is_active {
-                                colors::ACCENT
+                                accent(ui)
                             } else {
                                 colors::TEXT_MUTED
                             }),
                         );
                     });
                 });
-                ui.add_space(10.0);
+                ui.add_space(4.0);
                 if ui.available_width() >= 850.0 {
                     ui.horizontal(|ui| {
                         ui.vertical(|ui| {
+                            ui.spacing_mut().item_spacing.y = 4.0;
                             ui.set_width((ui.available_width() - 390.0).max(250.0));
                             ui.heading(self.active_tab.title());
                             ui.label(
@@ -345,7 +348,7 @@ impl VectoristsApp {
                     );
                     self.profile_controls(ui);
                 }
-                ui.add_space(16.0);
+                ui.add_space(4.0);
                 if let Some((message, true)) = &self.save_status {
                     Frame::new()
                         .fill(colors::DANGER_FAINT)
@@ -438,6 +441,30 @@ mod tests {
         assert!(!app.has_changes());
         app.profile_manager.set_active(1);
         assert!(app.has_changes());
+    }
+
+    #[test]
+    fn long_profile_names_fit_the_workspace() {
+        for size in [[680.0, 560.0], [1280.0, 800.0]] {
+            let ctx = egui::Context::default();
+            apply_theme(&ctx);
+            let mut app = app_without_hardware();
+            app.profile_manager.active_profile_mut().name = "W".repeat(64);
+            let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, size.into());
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(rect),
+                    ..Default::default()
+                },
+                |ui| app.workspace_ui(ui, &SensorTelemetry::default()),
+            );
+            output.textures_delta.clear();
+            assert!(
+                ctx.globally_used_rect().right() <= rect.right() + 1.0,
+                "Long profile name overflowed at {size:?}: {:?}",
+                ctx.globally_used_rect()
+            );
+        }
     }
 
     #[test]

@@ -1,7 +1,7 @@
 //! Polar response plot in sensor coordinates: positive Y points down.
 use crate::core::math::TWO_PI;
 use crate::core::profile::{NUM_DIRECTIONS, Profile};
-use crate::ui::theme::colors;
+use crate::ui::theme::{accent, colors};
 use eframe::egui::{self, Color32, Sense, Stroke, Vec2, Widget};
 
 pub struct PolarRadarWidget<'a> {
@@ -66,16 +66,44 @@ impl Widget for PolarRadarWidget<'_> {
             .max(1.5)
             + 0.06;
         let unit = radius / extent;
-        painter.circle_filled(center, radius + 12.0, colors::SIDEBAR_BG);
-        for i in 0..64 {
-            let a = i as f32 / 64.0 * TWO_PI;
+        painter.circle_filled(center, radius + 16.0, colors::SIDEBAR_BG);
+        painter.circle_stroke(
+            center,
+            radius + 16.0,
+            Stroke::new(1.0, colors::BORDER_SUBTLE),
+        );
+        painter.circle_stroke(
+            center,
+            radius + 5.0,
+            Stroke::new(0.8, colors::BORDER_STRONG),
+        );
+
+        // Sunburst watch-dial bezel ticks (96 fine radial lines)
+        for i in 0..96 {
+            let a = i as f32 / 96.0 * TWO_PI;
             let dir = Vec2::angled(a);
+            let is_major = i % 12 == 0;
+            let is_medium = i % 4 == 0;
+            let tick_len = if is_major {
+                9.0
+            } else if is_medium {
+                6.0
+            } else {
+                3.5
+            };
+            let stroke = if is_major {
+                Stroke::new(1.4, colors::TEXT_SECONDARY)
+            } else if is_medium {
+                Stroke::new(1.0, colors::TEXT_FAINT)
+            } else {
+                Stroke::new(0.6, colors::BORDER_STRONG)
+            };
             painter.line_segment(
                 [
-                    center + dir * (radius + 7.0),
-                    center + dir * (radius + if i % 4 == 0 { 12.0 } else { 10.0 }),
+                    center + dir * (radius + 6.0),
+                    center + dir * (radius + 6.0 + tick_len),
                 ],
-                Stroke::new(1.0, colors::BORDER_STRONG),
+                stroke,
             );
         }
         for multiplier in [0.5_f32, 1.0, 1.5] {
@@ -85,7 +113,7 @@ impl Widget for PolarRadarWidget<'_> {
                 Stroke::new(
                     1.0,
                     if multiplier == 1.0 {
-                        colors::BORDER_STRONG
+                        colors::TEXT_FAINT
                     } else {
                         colors::BORDER_SUBTLE
                     },
@@ -127,7 +155,8 @@ impl Widget for PolarRadarWidget<'_> {
             .collect();
         // A triangle fan supports concave radial curves as well as the neutral circle.
         let mut mesh = egui::Mesh::default();
-        let fill = Color32::from_rgba_unmultiplied(colors::ACCENT.r(), colors::ACCENT.g(), colors::ACCENT.b(), 24);
+        let fill =
+            Color32::from_rgba_unmultiplied(accent(ui).r(), accent(ui).g(), accent(ui).b(), 24);
         mesh.colored_vertex(center, fill);
         for point in &curve {
             mesh.colored_vertex(*point, fill);
@@ -138,7 +167,7 @@ impl Widget for PolarRadarWidget<'_> {
         painter.add(egui::Shape::mesh(mesh));
         painter.add(egui::Shape::closed_line(
             curve,
-            Stroke::new(2.0, colors::ACCENT),
+            Stroke::new(2.0, accent(ui)),
         ));
         let raw: Vec<_> = self
             .profile
@@ -151,28 +180,41 @@ impl Widget for PolarRadarWidget<'_> {
             .collect();
         painter.add(egui::Shape::closed_line(
             raw.clone(),
-            Stroke::new(1.0, Color32::from_rgba_unmultiplied(colors::WARNING.r(), colors::WARNING.g(), colors::WARNING.b(), 110)),
+            Stroke::new(
+                1.0,
+                Color32::from_rgba_unmultiplied(
+                    colors::WARNING.r(),
+                    colors::WARNING.g(),
+                    colors::WARNING.b(),
+                    110,
+                ),
+            ),
         ));
         for (i, point) in raw.iter().enumerate() {
             let selected = self.selected_index == Some(i);
             if selected {
-                painter.line_segment([center, *point], Stroke::new(1.0, colors::ACCENT));
-                painter.circle_stroke(*point, 8.0, Stroke::new(1.0, colors::ACCENT));
+                painter.line_segment([center, *point], Stroke::new(1.0, accent(ui)));
+                painter.circle_stroke(*point, 8.0, Stroke::new(1.0, accent(ui)));
             }
-            painter.circle_filled(
-                *point,
-                if selected { 4.5 } else { 3.0 },
-                colors::WARNING,
-            );
+            painter.circle_filled(*point, if selected { 4.5 } else { 3.0 }, colors::WARNING);
         }
-        painter.circle_filled(center, 3.0, colors::TEXT_PRIMARY);
+        painter.circle_stroke(
+            center,
+            6.0,
+            Stroke::new(
+                1.0,
+                Color32::from_rgba_unmultiplied(accent(ui).r(), accent(ui).g(), accent(ui).b(), 90),
+            ),
+        );
+        painter.circle_filled(center, 3.0, accent(ui));
+        painter.circle_filled(center, 1.2, Color32::WHITE);
         if let Some(position) = response.hover_pos() {
             let delta = position - center;
             if delta.length() > 10.0 && delta.length() < radius + 16.0 {
                 let angle = delta.y.atan2(delta.x).rem_euclid(TWO_PI);
                 painter.line_segment(
                     [center, center + delta.normalized() * radius],
-                    Stroke::new(1.0, colors::ACCENT),
+                    Stroke::new(1.0, accent(ui)),
                 );
                 return response.on_hover_ui_at_pointer(|ui| {
                     ui.strong(format!("Dirección {:.1}°", angle.to_degrees()));
@@ -191,6 +233,22 @@ impl Widget for PolarRadarWidget<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn response_curve_uses_the_selected_theme_accent() {
+        for tint in [colors::ACCENT_GOLD, colors::ACCENT_VIOLET] {
+            let ctx = egui::Context::default();
+            crate::ui::theme::apply_theme(&ctx);
+            crate::ui::theme::apply_theme_with_accent(&ctx, tint);
+            let profile = Profile::default();
+            let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                ui.add(PolarRadarWidget::new(&profile));
+            });
+            output.textures_delta.clear();
+            assert!(output.shapes.iter().any(|shape| matches!(
+                &shape.shape, egui::Shape::Path(path) if path.stroke.color == egui::epaint::ColorMode::Solid(tint)
+            )), "The response curve should use the selected accent");
+        }
+    }
     #[test]
     fn plot_selection_matches_windows_sensor_axes() {
         assert_eq!(direction_index(egui::vec2(1.0, 0.0)), 0);

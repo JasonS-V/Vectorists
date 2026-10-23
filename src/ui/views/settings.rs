@@ -1,7 +1,9 @@
 //! Profile library, device parameters and transparent local exports.
 use crate::core::profile::{Profile, ProfileManager};
-use crate::ui::theme::{colors, ThemeAccent};
-use crate::ui::widgets::{card_container, pill_chip, primary_button, secondary_button, section_heading};
+use crate::ui::theme::{ThemeAccent, accent, colors};
+use crate::ui::widgets::{
+    card_container, pill_chip, primary_button, secondary_button, section_heading,
+};
 use eframe::egui;
 
 #[derive(Default)]
@@ -11,7 +13,12 @@ pub struct SettingsView {
 }
 
 impl SettingsView {
-    pub fn ui(&mut self, ui: &mut egui::Ui, manager: &mut ProfileManager, theme_accent: &mut ThemeAccent) {
+    pub fn ui(
+        &mut self,
+        ui: &mut egui::Ui,
+        manager: &mut ProfileManager,
+        theme_accent: &mut ThemeAccent,
+    ) {
         if let Some((message, error)) = &self.status_message {
             egui::Frame::new()
                 .fill(if *error {
@@ -31,15 +38,11 @@ impl SettingsView {
                 .inner_margin(14)
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
-                    ui.label(
-                        egui::RichText::new(message)
-                            .size(13.0)
-                            .color(if *error {
-                                colors::DANGER
-                            } else {
-                                colors::SUCCESS
-                            }),
-                    );
+                    ui.label(egui::RichText::new(message).size(13.0).color(if *error {
+                        colors::DANGER
+                    } else {
+                        colors::SUCCESS
+                    }));
                 });
             ui.add_space(4.0);
         }
@@ -74,11 +77,9 @@ impl SettingsView {
                     .color(colors::TEXT_MUTED),
             );
             ui.label(
-                egui::RichText::new(
-                    "Estándar Premium Minimal Dark Dashboard  ·  Rust + egui  ·  Almacenamiento local",
-                )
-                .size(12.0)
-                .color(colors::TEXT_FAINT),
+                egui::RichText::new("Windows · Perfiles guardados en este equipo")
+                    .size(12.0)
+                    .color(colors::TEXT_FAINT),
             );
         });
     }
@@ -89,15 +90,15 @@ impl SettingsView {
             ui.set_width(width - 34.0);
             section_heading(
                 ui,
-                "Diseño y Variante de Acento",
-                "Estándar Premium Minimal Dark Dashboard. Elige tu acento rector.",
+                "Apariencia",
+                "Un espacio de trabajo que se siente tuyo.",
             );
             ui.add_space(4.0);
             ui.horizontal_wrapped(|ui| {
                 for (accent, label, preview_color) in [
-                    (ThemeAccent::GraphiteBlue, "Azul Grafito (Workspace)", colors::ACCENT_BLUE),
-                    (ThemeAccent::SoftViolet, "Violeta Suave (SaaS)", colors::ACCENT_VIOLET),
-                    (ThemeAccent::MidnightGold, "Oro Champagne (Fintech)", colors::ACCENT_GOLD),
+                    (ThemeAccent::GraphiteBlue, "Azul", colors::ACCENT_BLUE),
+                    (ThemeAccent::SoftViolet, "Violeta", colors::ACCENT_VIOLET),
+                    (ThemeAccent::MidnightGold, "Champán", colors::ACCENT_GOLD),
                 ] {
                     let active = *theme_accent == accent;
                     if pill_chip(ui, label, active, preview_color) {
@@ -107,9 +108,11 @@ impl SettingsView {
             });
             ui.add_space(2.0);
             ui.label(
-                egui::RichText::new("Acento activo según la directriz de 1 único color rector de la Guía de Estilo.")
-                    .size(11.5)
-                    .color(colors::TEXT_MUTED),
+                egui::RichText::new(
+                    "El color se aplica a los controles y a la curva de respuesta.",
+                )
+                .size(11.5)
+                .color(colors::TEXT_MUTED),
             );
         });
     }
@@ -139,7 +142,7 @@ impl SettingsView {
                                     egui::Button::selectable(
                                         active,
                                         egui::RichText::new(&profile.name).color(if active {
-                                            colors::ACCENT
+                                            accent(ui)
                                         } else {
                                             colors::TEXT_PRIMARY
                                         }),
@@ -166,7 +169,12 @@ impl SettingsView {
                 manager.set_active(selected);
             }
             ui.separator();
-            ui.label(egui::RichText::new("Crear un perfil").size(13.0).strong().color(colors::TEXT_PRIMARY));
+            ui.label(
+                egui::RichText::new("Crear un perfil")
+                    .size(13.0)
+                    .strong()
+                    .color(colors::TEXT_PRIMARY),
+            );
             let label = ui.label(
                 egui::RichText::new("Nombre del nuevo perfil")
                     .size(12.0)
@@ -233,12 +241,7 @@ impl SettingsView {
             );
             ui.horizontal_wrapped(|ui| {
                 for dpi in [400, 800, 1600, 3200] {
-                    if pill_chip(
-                        ui,
-                        &dpi.to_string(),
-                        profile.dpi == dpi,
-                        colors::ACCENT,
-                    ) {
+                    if pill_chip(ui, &dpi.to_string(), profile.dpi == dpi, accent(ui)) {
                         profile.dpi = dpi;
                     }
                 }
@@ -261,7 +264,7 @@ impl SettingsView {
                         ui,
                         &format!("{rate} Hz"),
                         profile.polling_rate_hz == rate,
-                        colors::ACCENT,
+                        accent(ui),
                     ) {
                         profile.polling_rate_hz = rate;
                     }
@@ -287,7 +290,11 @@ impl SettingsView {
                 "Exporta el perfil para una integración externa.",
             );
             ui.add_space(4.0);
-            ui.label(egui::RichText::new("Configuración JSON").strong().color(colors::TEXT_PRIMARY));
+            ui.label(
+                egui::RichText::new("Configuración JSON")
+                    .strong()
+                    .color(colors::TEXT_PRIMARY),
+            );
             ui.label(
                 egui::RichText::new(
                     "Parámetros del perfil, coeficientes de Fourier y tabla direccional.",
@@ -305,7 +312,11 @@ impl SettingsView {
                 }
             }
             ui.separator();
-            ui.label(egui::RichText::new("Tabla de respuesta CSV").strong().color(colors::TEXT_PRIMARY));
+            ui.label(
+                egui::RichText::new("Tabla de respuesta CSV")
+                    .strong()
+                    .color(colors::TEXT_PRIMARY),
+            );
             ui.label(
                 egui::RichText::new("360 ángulos con sus multiplicadores originales y efectivos.")
                     .size(12.0)

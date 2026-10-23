@@ -3,7 +3,7 @@
 # Vectorists
 
 **Hardware-agnostic 360° directional sensitivity calibration and biomechanical mouse curve engine.**  
-*Built in pure native Rust with a high-density, accessible HUD interface powered by `eframe`/`egui` and Direct Win32 Raw Input.*
+*Built in native Rust with a graphite desktop workspace powered by `eframe`/`egui` and Direct Win32 Raw Input.*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-2024_Edition-orange.svg)](https://www.rust-lang.org/)
@@ -54,7 +54,7 @@ Vectorists linearizes this physical response so your brain experiences consisten
 - **Profile and Curve Exports:**
   Export the existing JSON integration data and a 360-degree CSV lookup table. External consumers must implement the exported format; see the compatibility notes below.
 - **Native Precision Workspace:**
-  Responsive carbon and mint-cyan interface, Spanish labels, accessible controls, explicit save status, and a guided calibration flow.
+  Graphite panels, a blue accent with violet and champagne alternatives, Spanish labels, keyboard-accessible controls, explicit save status, and a guided calibration flow.
 
 ---
 
@@ -92,21 +92,21 @@ R_x^{(t)} &= x_{\text{target}} - \Delta x_{\text{out}}
 
 Vectorists uses a Spanish-language native precision workspace with three views:
 
-- **Mapa polar:** live sensor measurements, a selectable 360° response plot, presets, keyboard-adjustable direction sliders, and a local movement preview.
+- **Vista general:** live sensor measurements with an explicit idle state, a selectable 360° response plot, four curve presets, intensity and selected-direction controls, an expandable list of all 16 axes, and a local movement preview.
 - **Calibración:** guided instructions, progress across 16 directions, a test arena that fits the visible window, and per-direction results before applying the curve.
 - **Configuración:** profile selection and creation, editable sensor parameters, and JSON/CSV exports with visible destination and error messages.
 
-The sidebar collapses to labeled icons below 1000 logical pixels. Dashboard and settings columns stack when the content area is narrow. The default window is 1200 × 780, with a 680 × 560 minimum. Content scrolls vertically while navigation and save status remain visible.
+The sidebar collapses to accessible icons below 1000 logical pixels. Dashboard and settings columns stack when the content area is narrow. The default window is 1280 × 800, with a 680 × 560 minimum. Content scrolls vertically while navigation and save status remain visible. Windows provides the native title bar, minimize, maximize, and close controls.
 
-**Visual system:** carbon background `#0D1014`, panels `#161B21`, mint-cyan accent `#59DFD3`, amber samples `#EFB868`, Segoe UI text, and Consolas numeric readouts, with bundled font fallbacks. Controls expose accessible names, keyboard focus, and native slider behavior.
+**Visual system:** graphite workspace `#22242E`, navigation `#191B23`, panels `#2A2D38`, blue accent `#74A9F6`, amber samples, Segoe UI text, and Consolas numeric readouts, with bundled font fallbacks. Appearance settings apply the selected accent to custom plots and controls as well as native egui widgets. Controls expose accessible names, visible keyboard focus, and native slider behavior.
 
-**Saving:** use **Guardar cambios** or **Ctrl+S**. The footer distinguishes saved state, pending changes, and errors. Profiles remain in `%APPDATA%\Vectorists\profiles.json`; exports are written to `%APPDATA%\Vectorists\exports` on Windows, independent of the launch directory.
+**Saving:** use **Guardar perfil** or **Ctrl+S** to save all profiles. The footer distinguishes saved state, pending changes, and errors. Profiles remain in `%APPDATA%\Vectorists\profiles.json`; exports are written to `%APPDATA%\Vectorists\exports` on Windows, independent of the launch directory.
 
 The response plot and movement canvas are local previews. Pausing the preview displays a neutral effective curve and preserves raw movement. They do not install a driver or modify global mouse input. The JSON contains the existing integration format; compatibility must be checked by the external consumer.
 
 **Plot coordinates:** 0° is right, 90° down, 180° left, and 270° up, matching Windows sensor coordinates and the calibrator. Amber nodes show the configured multipliers; the cyan curve includes the selected intensity and preview state.
 
-**Verification:** `cargo test` includes the existing engine tests, preview pause/strength regression checks, angle selection, calibration restart, save-state tracking, and egui rendering checks for all views at five window sizes. A separate rendering check ensures the calibration arena remains visible at small and large sizes. Native navigation is also checked in the running Windows app.
+**Verification:** `cargo test` includes the existing engine tests, preview pause/strength regression checks, angle selection, calibration restart, save-state tracking, long profile names, theme accent rendering, and egui rendering checks for all views at five window sizes. A separate rendering check ensures the calibration arena remains visible at small and large sizes. Native navigation and accent changes are also checked in the running Windows app.
 
 ---
 

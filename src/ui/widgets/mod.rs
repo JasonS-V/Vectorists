@@ -3,6 +3,6 @@ pub mod radar;
 
 pub use modern::{
     NavIcon, card_container, direction_micro_bar, metric_card, nav_item, pill_chip, primary_button,
-    secondary_button, section_heading, toggle_switch,
+    quick_preset_capsule, secondary_button, section_heading, toggle_switch,
 };
 pub use radar::PolarRadarWidget;

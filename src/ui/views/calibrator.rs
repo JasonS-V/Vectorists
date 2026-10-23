@@ -1,7 +1,7 @@
 //! Guided radial flick calibration with explicit progress and reviewable results.
 use crate::core::math::TWO_PI;
 use crate::core::profile::{NUM_DIRECTIONS, Profile};
-use crate::ui::theme::colors;
+use crate::ui::theme::{accent, colors};
 use crate::ui::widgets::{card_container, primary_button, section_heading};
 use eframe::egui::{self, Pos2, Sense, Stroke, Vec2};
 use std::time::Instant;
@@ -71,7 +71,7 @@ impl CalibratorView {
                         column.label(
                             egui::RichText::new(number)
                                 .monospace()
-                                .color(colors::ACCENT),
+                                .color(accent(column)),
                         );
                         column.strong(title);
                         column.label(
@@ -132,7 +132,7 @@ impl CalibratorView {
             let progress = self.sequence_cursor as f32 / NUM_DIRECTIONS as f32;
             ui.add(
                 egui::ProgressBar::new(progress)
-                    .fill(colors::ACCENT)
+                    .fill(accent(ui))
                     .desired_height(6.0),
             );
             let instruction = match self.state {
@@ -156,11 +156,7 @@ impl CalibratorView {
             );
             self.arena(ui);
             if let Some(message) = &self.last_feedback {
-                ui.label(
-                    egui::RichText::new(message)
-                        .size(13.0)
-                        .color(colors::ACCENT_CYAN),
-                );
+                ui.label(egui::RichText::new(message).size(13.0).color(accent(ui)));
             }
         });
         if self.state == CalibratorState::Completed {
@@ -205,7 +201,7 @@ impl CalibratorView {
             CalibratorState::Idle => {
                 p.circle_filled(center, 32.0, colors::PANEL_BG_LIGHT);
                 p.circle_stroke(center, 20.0, Stroke::new(1.5, colors::TEXT_FAINT));
-                p.circle_stroke(center, 8.0, Stroke::new(1.5, colors::ACCENT));
+                p.circle_stroke(center, 8.0, Stroke::new(1.5, accent(ui)));
                 p.text(
                     center + egui::vec2(0.0, 64.0),
                     egui::Align2::CENTER_CENTER,
@@ -215,15 +211,15 @@ impl CalibratorView {
                 );
             }
             CalibratorState::WaitingForCenter => {
-                p.circle_filled(center, 18.0, colors::ACCENT);
-                p.circle_stroke(center, 25.0, Stroke::new(1.0, colors::ACCENT));
+                p.circle_filled(center, 18.0, accent(ui));
+                p.circle_stroke(center, 25.0, Stroke::new(1.0, accent(ui)));
                 p.circle_filled(center, 3.0, colors::CHASSIS_BG);
                 p.text(
                     center + egui::vec2(0.0, 46.0),
                     egui::Align2::CENTER_CENTER,
                     "Haz clic aquí",
                     egui::FontId::proportional(13.0),
-                    colors::ACCENT,
+                    accent(ui),
                 );
                 if response.clicked()
                     && response
@@ -273,11 +269,7 @@ impl CalibratorView {
                 }
             }
             CalibratorState::Completed => {
-                p.circle_filled(
-                    center - egui::vec2(0.0, 30.0),
-                    30.0,
-                    colors::SUCCESS_FAINT,
-                );
+                p.circle_filled(center - egui::vec2(0.0, 30.0), 30.0, colors::SUCCESS_FAINT);
                 let c = center - egui::vec2(0.0, 30.0);
                 p.line_segment(
                     [c + egui::vec2(-12.0, 0.0), c + egui::vec2(-3.0, 9.0)],
