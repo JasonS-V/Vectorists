@@ -1,4 +1,5 @@
 pub mod core;
+pub mod input;
 pub mod ui;
 
 use eframe::egui;

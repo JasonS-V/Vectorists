@@ -1,6 +1,7 @@
 //! Main Vectorists eframe/egui Application.
 
 use crate::core::profile::ProfileManager;
+use crate::input::RawInputListener;
 use crate::ui::theme::{apply_theme, colors};
 use crate::ui::views::{CalibratorView, DashboardView, SettingsView};
 use eframe::egui::{self, Frame, Stroke};
@@ -18,17 +19,20 @@ pub struct VectoristsApp {
     pub dashboard_view: DashboardView,
     pub calibrator_view: CalibratorView,
     pub settings_view: SettingsView,
+    pub raw_listener: Option<RawInputListener>,
 }
 
 impl Default for VectoristsApp {
     fn default() -> Self {
         let profile_manager = ProfileManager::load_or_default();
+        let raw_listener = Some(RawInputListener::start());
         Self {
             active_tab: ActiveTab::Dashboard,
             profile_manager,
             dashboard_view: DashboardView::default(),
             calibrator_view: CalibratorView::default(),
             settings_view: SettingsView::default(),
+            raw_listener,
         }
     }
 }
@@ -133,7 +137,9 @@ impl eframe::App for VectoristsApp {
 
             ui.add_space(4.0);
 
-            // 3. Bottom Status Bar
+            // 3. Bottom Status Bar with Hardware Telemetry
+            let telemetry = self.raw_listener.as_ref().map(|l| l.telemetry()).unwrap_or_default();
+
             Frame::new()
                 .fill(colors::CHASSIS_BG)
                 .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
@@ -143,7 +149,7 @@ impl eframe::App for VectoristsApp {
                         let active = self.profile_manager.active_profile();
                         ui.label(
                             egui::RichText::new(format!(
-                                "Sensibilidad: {} DPI | Polling: {} Hz | Fuerza: {:.0}%",
+                                "Perfil: {} DPI | Polling: {} Hz | Fuerza: {:.0}%",
                                 active.dpi,
                                 active.polling_rate_hz,
                                 active.strength * 100.0
@@ -151,6 +157,23 @@ impl eframe::App for VectoristsApp {
                             .monospace()
                             .size(10.0)
                             .color(colors::TEXT_FAINT),
+                        );
+
+                        ui.add_space(8.0);
+                        ui.label(egui::RichText::new("•").size(10.0).color(colors::BORDER_STRONG));
+                        ui.add_space(8.0);
+
+                        let hw_text = if telemetry.polling_rate_hz > 0 {
+                            format!("Sensor en vivo: {} Hz ({:.0} CPS)", telemetry.polling_rate_hz, telemetry.counts_per_sec)
+                        } else {
+                            "Sensor en vivo: Esperando entrada...".to_string()
+                        };
+
+                        ui.label(
+                            egui::RichText::new(hw_text)
+                                .monospace()
+                                .size(10.0)
+                                .color(colors::ACCENT_CYAN),
                         );
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -163,6 +186,9 @@ impl eframe::App for VectoristsApp {
                         });
                     });
                 });
+
+            // Request continuous 60Hz UI repaint when mouse moves
+            ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
         });
     }
 }
