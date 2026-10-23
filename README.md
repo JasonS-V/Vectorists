@@ -12,7 +12,7 @@
 [![Polling Rate](https://img.shields.io/badge/Polling_Rate-Up_to_8000Hz-brightgreen.svg)](#hardware-input)
 [![RAM Footprint](https://img.shields.io/badge/Memory_Footprint-%3C15MB-success.svg)](#performance-benchmarks)
 
-[Features](#-key-features) • [Biomechanics](#-the-biomechanical-problem) • [Mathematical Model](#-mathematical-formulation) • [Quickstart](#-quickstart) • [Driver Interop](#-driver-interoperability) • [Architecture](#-architecture)
+[Features](#-key-features) • [Biomechanics](#-the-biomechanical-problem) • [Mathematical Model](#-mathematical-formulation) • [Quickstart](#-quickstart) • [Exports](#-export-and-external-integrations) • [Architecture](#-architecture)
 
 </div>
 
@@ -51,10 +51,10 @@ Vectorists linearizes this physical response so your brain experiences consisten
   A built-in 16-axis diagnostic tool. Measures instantaneous reaction time, overshoot/undershoot ratio, and settling time ($t_s$) in milliseconds, automatically generating the optimal compensating profile.
 - **Uncoalesced Hardware Telemetry (Win32 Raw Input):**  
   A dedicated background worker listening to `WM_INPUT` via `RIDEV_INPUTSINK`. Directly samples high-frequency mouse reports (1,000 Hz, 4,000 Hz, 8,000 Hz) without Windows pointer ballistics or compositor delays.
-- **Direct Driver Interop (RawAccel & Firmware LUTs):**  
-  One-click export to `settings.json` for the **RawAccel** kernel filter driver (permitted by Riot Vanguard, EAC, and BattlEye), plus 360-degree CSV look-up tables for hardware USB pass-through dongles (Raspberry Pi Pico / RP2040).
-- **Anti-Slop Design Language:**  
-  High-contrast Optical Carbon & Vectorial Cyan palette with strict WCAG AAA compliance ($>17:1$ contrast ratio), `tabular-nums` formatting for telemetry, and zero bloatware (<15 MB RAM, 0.0% background CPU).
+- **Profile and Curve Exports:**
+  Export the existing JSON integration data and a 360-degree CSV lookup table. External consumers must implement the exported format; see the compatibility notes below.
+- **Native Precision Workspace:**
+  Responsive carbon and mint-cyan interface, Spanish labels, accessible controls, explicit save status, and a guided calibration flow.
 
 ---
 
@@ -90,31 +90,23 @@ R_x^{(t)} &= x_{\text{target}} - \Delta x_{\text{out}}
 
 ## 🖥 User Interface & Visuals
 
-The UI follows the **Anti-Slop** design engineering principles:
+Vectorists uses a Spanish-language native precision workspace with three views:
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│  VECTORISTS v0.1.0   [● ACTIVE] [PROFILE: VALORANT TACTICAL]  [—] [✕] │
-├─────────────┬──────────────────────────────────────────────────────────┤
-│             │  360° POLAR RESPONSE MAP                                 │
-│  [✦] POLAR  │                 90° N (Up: +4.0%)                        │
-│  [▶] CALIB  │                     ▲                                    │
-│  [⚙] CONFIG │         135° NW \   │   / 45° NE                         │
-│  ─────────  │  180° W ◄───────────┼───────────► 0° E (Right: -5.0%)    │
-│  DPI:  800  │  (Left)         /   │   \                                │
-│  Hz:   1000 │                     ▼                                    │
-│  α:     75% │                 270° S (Down: +3.0%)                     │
-│             │  [— Baseline 1:1]   [● Raw Anatomy]   [— Fourier Curve]  │
-├─────────────┴──────────────────────────────────────────────────────────┤
-│  Config: 800 DPI | 1000 Hz | Live Sensor: 998 Hz (1,420 CPS) | <0.02ms │
-└────────────────────────────────────────────────────────────────────────┘
-```
+- **Mapa polar:** live sensor measurements, a selectable 360° response plot, presets, keyboard-adjustable direction sliders, and a local movement preview.
+- **Calibración:** guided instructions, progress across 16 directions, a test arena that fits the visible window, and per-direction results before applying the curve.
+- **Configuración:** profile selection and creation, editable sensor parameters, and JSON/CSV exports with visible destination and error messages.
 
-- **Chassis Background:** `#0C0D10` (Deep Carbon)
-- **Card Panels:** `#15171D` (Concentric 6px/4px border radius)
-- **Active Accent:** `#00E5FF` (Vectorial Cyan, WCAG AAA 13.2:1)
-- **Alert / Raw Samples:** `#FF9F1C` (High-visibility Amber)
-- **Typography:** `Inter` for hierarchy; `JetBrains Mono` with `tabular-nums` for angles, frequencies, and millisecond latencies.
+The sidebar collapses to labeled icons below 1000 logical pixels. Dashboard and settings columns stack when the content area is narrow. The default window is 1200 × 780, with a 680 × 560 minimum. Content scrolls vertically while navigation and save status remain visible.
+
+**Visual system:** carbon background `#0D1014`, panels `#161B21`, mint-cyan accent `#59DFD3`, amber samples `#EFB868`, Segoe UI text, and Consolas numeric readouts, with bundled font fallbacks. Controls expose accessible names, keyboard focus, and native slider behavior.
+
+**Saving:** use **Guardar cambios** or **Ctrl+S**. The footer distinguishes saved state, pending changes, and errors. Profiles remain in `%APPDATA%\Vectorists\profiles.json`; exports are written to `%APPDATA%\Vectorists\exports` on Windows, independent of the launch directory.
+
+The response plot and movement canvas are local previews. Pausing the preview displays a neutral effective curve and preserves raw movement. They do not install a driver or modify global mouse input. The JSON contains the existing integration format; compatibility must be checked by the external consumer.
+
+**Plot coordinates:** 0° is right, 90° down, 180° left, and 270° up, matching Windows sensor coordinates and the calibrator. Amber nodes show the configured multipliers; the cyan curve includes the selected intensity and preview state.
+
+**Verification:** `cargo test` includes the existing engine tests, preview pause/strength regression checks, angle selection, calibration restart, save-state tracking, and egui rendering checks for all views at five window sizes. A separate rendering check ensures the calibration arena remains visible at small and large sizes. Native navigation is also checked in the running Windows app.
 
 ---
 
@@ -132,7 +124,7 @@ cd Vectorists
 # Run development build
 cargo run
 
-# Run comprehensive test suite (16 tests)
+# Run the engine and UI regression tests
 cargo test
 ```
 
@@ -145,20 +137,13 @@ The optimized executable will be located at:
 
 ---
 
-## 🎮 Driver Interoperability
+## 🎮 Export and External Integrations
 
-Vectorists provides two non-conflicting avenues to run your calibrated profile globally across all competitive titles:
+Open **Configuración** and use **Exportar configuración .json** or **Exportar tabla de 360° .csv**. Both exports are stored in `%APPDATA%\Vectorists\exports`, with the profile ID included in the filename. The interface shows the destination and reports write failures.
 
-### Option A: Kernel Driver via RawAccel (Zero Ban Risk)
-1. In Vectorists, navigate to **Settings & Export**.
-2. Click **Export to RawAccel (settings.json)**.
-3. Place the exported JSON file into your RawAccel installation directory.
-4. RawAccel applies your customized Fourier table at the Windows kernel level (`mouseflt.sys`). Validated and accepted by Riot Vanguard, Easy Anti-Cheat, and BattlEye.
+The JSON preserves the project's existing `openvector-v1.0` integration data: profile parameters, Fourier coefficients, and 16 direction entries. It is not the native RawAccel settings schema. The CSV provides original and effective multipliers for each integer degree from 0 to 359.
 
-### Option B: Hardware Passthrough Dongle (RP2040)
-1. Click **Export 360° LUT Table (CSV)** to generate a discrete degree-by-degree lookup table.
-2. Flash the CSV to a \$4 Raspberry Pi Pico acting as a USB Host-to-Device bridge.
-3. 100% hardware-level execution: completely invisible to any anti-cheat software, functional on Windows, Linux, macOS, and consoles.
+Applying either format to global mouse input requires a compatible external implementation. This application currently captures telemetry and previews correction locally; external driver, firmware, and anti-cheat compatibility have not been validated by the UI test suite.
 
 ---
 

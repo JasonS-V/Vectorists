@@ -8,9 +8,9 @@ use ui::VectoristsApp;
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([920.0, 640.0])
-            .with_min_inner_size([860.0, 580.0])
-            .with_title("Vectorists - Biomechanical Mouse Curve Engine"),
+            .with_inner_size([1200.0, 780.0])
+            .with_min_inner_size([680.0, 560.0])
+            .with_title("Vectorists · Control de precisión"),
         ..Default::default()
     };
 
