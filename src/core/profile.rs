@@ -121,6 +121,11 @@ impl Profile {
         )
     }
 
+    /// Alias for `preset_smooth_tracking`.
+    pub fn preset_tracking_smooth() -> Self {
+        Self::preset_smooth_tracking()
+    }
+
     /// Exports profile configuration to RawAccel interop JSON.
     pub fn to_rawaccel_config(&self) -> RawAccelConfig {
         RawAccelConfig {
@@ -147,6 +152,12 @@ impl Profile {
         }
     }
 
+    /// Exports profile to RawAccel JSON string.
+    pub fn export_rawaccel_json(&self) -> Result<String, serde_json::Error> {
+        let config = self.to_rawaccel_config();
+        serde_json::to_string_pretty(&config)
+    }
+
     /// Exports the 360-degree discrete lookup table to CSV format.
     pub fn export_lut_csv(&self) -> String {
         let mut csv = String::from("angle_degrees,raw_multiplier,effective_multiplier\n");
@@ -157,6 +168,11 @@ impl Profile {
             csv.push_str(&format!("{deg},{raw:.4},{effective:.4}\n"));
         }
         csv
+    }
+
+    /// Alias for `export_lut_csv`.
+    pub fn export_polar_lut_csv(&self) -> String {
+        self.export_lut_csv()
     }
 }
 
@@ -208,6 +224,11 @@ impl ProfileManager {
             .unwrap_or(&self.profiles[0])
     }
 
+    /// Returns a slice of all managed profiles.
+    pub fn profiles(&self) -> &[Profile] {
+        &self.profiles
+    }
+
     /// Returns a mutable reference to the currently active profile.
     pub fn active_profile_mut(&mut self) -> &mut Profile {
         if self.active_index >= self.profiles.len() {
@@ -223,6 +244,16 @@ impl ProfileManager {
                 p.is_active = i == index;
             }
             self.active_index = index;
+        }
+    }
+
+    /// Sets active profile by id.
+    pub fn set_active_profile(&mut self, id: &str) -> bool {
+        if let Some(pos) = self.profiles.iter().position(|p| p.id == id) {
+            self.set_active(pos);
+            true
+        } else {
+            false
         }
     }
 
@@ -249,7 +280,12 @@ impl ProfileManager {
     /// `%APPDATA%\OpenVector\profiles.json` on Windows.
     pub fn default_storage_path() -> PathBuf {
         let base_dir = dirs_or_fallback();
-        base_dir.join("OpenVector").join("profiles.json")
+        base_dir.join("Vectorists").join("profiles.json")
+    }
+
+    /// Saves the current profiles to the default path.
+    pub fn save_to_default_file(&self) -> Result<(), String> {
+        self.save_to_file(&Self::default_storage_path())
     }
 
     /// Saves the current profiles to the given path.
@@ -259,6 +295,11 @@ impl ProfileManager {
         }
         let json = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
         fs::write(path, json).map_err(|e| e.to_string())
+    }
+
+    /// Loads profiles from the default path, or returns default if not found.
+    pub fn load_or_default() -> Self {
+        Self::load_from_file(&Self::default_storage_path())
     }
 
     /// Loads profiles from the given path, or returns default if not found.

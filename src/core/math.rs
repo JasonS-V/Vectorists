@@ -117,6 +117,12 @@ impl FourierModel {
         result.clamp(0.1, 4.0)
     }
 
+    /// Alias for `evaluate`.
+    #[inline]
+    pub fn eval(&self, theta: f32) -> f32 {
+        self.evaluate(theta)
+    }
+
     /// Evaluates the final scaling factor attenuated by user strength α ∈ [0.0, 2.0]:
     /// S_final(θ) = 1.0 + α * (S(θ) - 1.0)
     #[inline]
