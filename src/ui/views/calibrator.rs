@@ -71,7 +71,7 @@ impl CalibratorView {
                         column.label(
                             egui::RichText::new(number)
                                 .monospace()
-                                .color(colors::ACCENT_CYAN),
+                                .color(colors::ACCENT),
                         );
                         column.strong(title);
                         column.label(
@@ -132,8 +132,8 @@ impl CalibratorView {
             let progress = self.sequence_cursor as f32 / NUM_DIRECTIONS as f32;
             ui.add(
                 egui::ProgressBar::new(progress)
-                    .fill(colors::ACCENT_CYAN)
-                    .desired_height(4.0),
+                    .fill(colors::ACCENT)
+                    .desired_height(6.0),
             );
             let instruction = match self.state {
                 CalibratorState::Idle => {
@@ -205,7 +205,7 @@ impl CalibratorView {
             CalibratorState::Idle => {
                 p.circle_filled(center, 32.0, colors::PANEL_BG_LIGHT);
                 p.circle_stroke(center, 20.0, Stroke::new(1.5, colors::TEXT_FAINT));
-                p.circle_stroke(center, 8.0, Stroke::new(1.5, colors::ACCENT_CYAN));
+                p.circle_stroke(center, 8.0, Stroke::new(1.5, colors::ACCENT));
                 p.text(
                     center + egui::vec2(0.0, 64.0),
                     egui::Align2::CENTER_CENTER,
@@ -215,15 +215,15 @@ impl CalibratorView {
                 );
             }
             CalibratorState::WaitingForCenter => {
-                p.circle_filled(center, 18.0, colors::ACCENT_CYAN);
-                p.circle_stroke(center, 25.0, Stroke::new(1.0, colors::ACCENT_CYAN));
+                p.circle_filled(center, 18.0, colors::ACCENT);
+                p.circle_stroke(center, 25.0, Stroke::new(1.0, colors::ACCENT));
                 p.circle_filled(center, 3.0, colors::CHASSIS_BG);
                 p.text(
                     center + egui::vec2(0.0, 46.0),
                     egui::Align2::CENTER_CENTER,
                     "Haz clic aquí",
                     egui::FontId::proportional(13.0),
-                    colors::ACCENT_CYAN,
+                    colors::ACCENT,
                 );
                 if response.clicked()
                     && response
@@ -246,8 +246,8 @@ impl CalibratorView {
                 let target = center + Vec2::angled(angle_rad) * distance;
                 p.circle_stroke(center, 5.0, Stroke::new(1.0, colors::TEXT_FAINT));
                 p.line_segment([center, target], Stroke::new(1.0, colors::BORDER_STRONG));
-                p.circle_filled(target, 16.0, colors::ALERT_AMBER);
-                p.circle_stroke(target, 23.0, Stroke::new(1.0, colors::ALERT_AMBER));
+                p.circle_filled(target, 16.0, colors::WARNING);
+                p.circle_stroke(target, 23.0, Stroke::new(1.0, colors::WARNING));
                 p.circle_filled(target, 4.0, colors::CHASSIS_BG);
                 if response.clicked()
                     && let Some(position) = response.interact_pointer_pos()
@@ -276,16 +276,16 @@ impl CalibratorView {
                 p.circle_filled(
                     center - egui::vec2(0.0, 30.0),
                     30.0,
-                    colors::SUCCESS_GREEN_FAINT,
+                    colors::SUCCESS_FAINT,
                 );
                 let c = center - egui::vec2(0.0, 30.0);
                 p.line_segment(
                     [c + egui::vec2(-12.0, 0.0), c + egui::vec2(-3.0, 9.0)],
-                    Stroke::new(2.5, colors::SUCCESS_GREEN),
+                    Stroke::new(2.5, colors::SUCCESS),
                 );
                 p.line_segment(
                     [c + egui::vec2(-3.0, 9.0), c + egui::vec2(13.0, -9.0)],
-                    Stroke::new(2.5, colors::SUCCESS_GREEN),
+                    Stroke::new(2.5, colors::SUCCESS),
                 );
                 p.text(
                     center + egui::vec2(0.0, 24.0),

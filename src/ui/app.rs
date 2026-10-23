@@ -1,9 +1,9 @@
 //! Native workspace shell, profile switching and persistent status.
 use crate::core::profile::ProfileManager;
 use crate::input::{RawInputListener, SensorTelemetry};
-use crate::ui::theme::{apply_theme, colors};
+use crate::ui::theme::{apply_theme, apply_theme_with_accent, colors, ThemeAccent};
 use crate::ui::views::{CalibratorView, DashboardView, SettingsView};
-use crate::ui::widgets::{NavIcon, nav_item, primary_button, toggle_switch};
+use crate::ui::widgets::{nav_item, primary_button, toggle_switch, NavIcon};
 use eframe::egui::{self, Frame, Stroke};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -37,6 +37,7 @@ pub struct VectoristsApp {
     pub calibrator_view: CalibratorView,
     pub settings_view: SettingsView,
     pub raw_listener: Option<RawInputListener>,
+    pub theme_accent: ThemeAccent,
     saved_profiles: ProfileManager,
     save_status: Option<(String, bool)>,
 }
@@ -52,6 +53,7 @@ impl Default for VectoristsApp {
             calibrator_view: CalibratorView::default(),
             settings_view: SettingsView::default(),
             raw_listener: Some(RawInputListener::start()),
+            theme_accent: ThemeAccent::default(),
             save_status: None,
         }
     }
@@ -86,28 +88,33 @@ impl VectoristsApp {
             let p = ui.painter();
             p.line_segment(
                 [c + egui::vec2(-12.0, -10.0), c + egui::vec2(0.0, 11.0)],
-                Stroke::new(3.0, colors::ACCENT_CYAN),
+                Stroke::new(3.0, colors::ACCENT),
             );
             p.line_segment(
                 [c + egui::vec2(0.0, 11.0), c + egui::vec2(12.0, -10.0)],
-                Stroke::new(3.0, colors::ACCENT_CYAN),
+                Stroke::new(3.0, colors::ACCENT),
             );
             p.line_segment(
                 [c + egui::vec2(0.0, -5.0), c + egui::vec2(5.0, -14.0)],
                 Stroke::new(3.0, colors::TEXT_PRIMARY),
             );
             if !compact {
-                ui.label(egui::RichText::new("vectorists").size(21.0).strong());
+                ui.label(
+                    egui::RichText::new("vectorists")
+                        .size(20.0)
+                        .strong()
+                        .color(colors::TEXT_PRIMARY),
+                );
             }
         });
-        ui.add_space(32.0);
+        ui.add_space(28.0);
         if !compact {
             ui.label(
                 egui::RichText::new("ESPACIO DE TRABAJO")
-                    .size(10.0)
-                    .color(colors::TEXT_FAINT),
+                    .size(10.5)
+                    .color(colors::TEXT_MUTED),
             );
-            ui.add_space(4.0);
+            ui.add_space(6.0);
         }
         for (tab, label, icon) in [
             (ActiveTab::Dashboard, "Mapa polar", NavIcon::Polar),
@@ -122,26 +129,41 @@ impl VectoristsApp {
         if !compact {
             Frame::new()
                 .fill(colors::PANEL_BG)
-                .corner_radius(8)
-                .inner_margin(14)
+                .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
+                .corner_radius(12)
+                .inner_margin(16)
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     ui.label(
                         egui::RichText::new("Hecho para tu forma\nde apuntar.")
-                            .size(15.0)
-                            .strong(),
+                            .size(14.0)
+                            .strong()
+                            .color(colors::TEXT_PRIMARY),
                     );
+                    ui.add_space(2.0);
                     ui.label(
                         egui::RichText::new("16 direcciones. Una curva\nque se adapta a ti.")
                             .size(12.0)
                             .color(colors::TEXT_MUTED),
                     );
-                    ui.add_space(6.0);
-                    if ui.button("Calibrar mi ratón  →").clicked() {
+                    ui.add_space(8.0);
+                    if ui
+                        .add(
+                            egui::Button::new(
+                                egui::RichText::new("Calibrar mi ratón  →")
+                                    .size(12.0)
+                                    .color(colors::ACCENT),
+                            )
+                            .fill(colors::PANEL_BG_LIGHT)
+                            .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
+                            .corner_radius(8),
+                        )
+                        .clicked()
+                    {
                         self.active_tab = ActiveTab::Calibrator;
                     }
                 });
-            ui.add_space(12.0);
+            ui.add_space(14.0);
         }
         ui.label(
             egui::RichText::new(if compact {
@@ -150,7 +172,7 @@ impl VectoristsApp {
                 "VECTORISTS  /  v0.1.0"
             })
             .size(10.0)
-            .color(colors::TEXT_FAINT),
+            .color(colors::TEXT_MUTED),
         );
     }
 
@@ -190,12 +212,13 @@ impl VectoristsApp {
             self.save();
         }
         egui::Panel::bottom("status")
-            .exact_size(32.0)
+            .exact_size(34.0)
             .resizable(false)
             .frame(
                 Frame::new()
                     .fill(colors::SIDEBAR_BG)
-                    .inner_margin(egui::Margin::symmetric(16, 6)),
+                    .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
+                    .inner_margin(egui::Margin::symmetric(20, 7)),
             )
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
@@ -206,9 +229,9 @@ impl VectoristsApp {
                         } else {
                             "○  Sensor en espera"
                         })
-                        .size(11.0)
+                        .size(11.5)
                         .color(if streaming {
-                            colors::SUCCESS_GREEN
+                            colors::SUCCESS
                         } else {
                             colors::TEXT_MUTED
                         }),
@@ -217,49 +240,51 @@ impl VectoristsApp {
                         let profile = self.profile_manager.active_profile();
                         ui.label(
                             egui::RichText::new(format!(
-                                "{} DPI  /  {} Hz configurados",
+                                "{} DPI  ·  {} Hz configurados",
                                 profile.dpi, profile.polling_rate_hz
                             ))
+                            .monospace()
                             .size(11.0)
-                            .color(colors::TEXT_FAINT),
+                            .color(colors::TEXT_MUTED),
                         );
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if let Some((_, true)) = &self.save_status {
                             ui.label(
-                                egui::RichText::new("Error al guardar")
-                                    .size(11.0)
-                                    .color(colors::ALERT_AMBER),
+                                egui::RichText::new("● Error al guardar")
+                                    .size(11.5)
+                                    .color(colors::DANGER),
                             );
                         } else if self.has_changes() {
                             ui.label(
                                 egui::RichText::new("● Cambios sin guardar")
-                                    .size(11.0)
-                                    .color(colors::ALERT_AMBER),
+                                    .size(11.5)
+                                    .color(colors::WARNING),
                             );
                         } else if let Some((message, error)) = &self.save_status {
-                            ui.label(egui::RichText::new(message).size(11.0).color(if *error {
-                                colors::ALERT_AMBER
+                            ui.label(egui::RichText::new(message).size(11.5).color(if *error {
+                                colors::DANGER
                             } else {
-                                colors::SUCCESS_GREEN
+                                colors::SUCCESS
                             }));
                         } else {
                             ui.label(
                                 egui::RichText::new("Almacenamiento local")
-                                    .size(11.0)
-                                    .color(colors::TEXT_FAINT),
+                                    .size(11.5)
+                                    .color(colors::TEXT_MUTED),
                             );
                         }
                     });
                 });
             });
         egui::Panel::left("navigation")
-            .exact_size(if compact { 68.0 } else { 220.0 })
+            .exact_size(if compact { 68.0 } else { 224.0 })
             .resizable(false)
             .frame(
                 Frame::new()
                     .fill(colors::SIDEBAR_BG)
-                    .inner_margin(egui::Margin::symmetric(12, 16)),
+                    .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
+                    .inner_margin(egui::Margin::symmetric(14, 18)),
             )
             .show(ui, |ui| self.sidebar(ui, compact));
         egui::CentralPanel::default()
@@ -272,8 +297,8 @@ impl VectoristsApp {
                 ui.horizontal(|ui| {
                     ui.label(
                         egui::RichText::new("CONTROL DE PRECISIÓN")
-                            .size(10.0)
-                            .color(colors::TEXT_FAINT),
+                            .size(10.5)
+                            .color(colors::TEXT_MUTED),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         let profile = self.profile_manager.active_profile_mut();
@@ -288,9 +313,9 @@ impl VectoristsApp {
                             } else {
                                 "Vista previa en pausa"
                             })
-                            .size(12.0)
+                            .size(12.5)
                             .color(if profile.is_active {
-                                colors::ACCENT_CYAN
+                                colors::ACCENT
                             } else {
                                 colors::TEXT_MUTED
                             }),
@@ -305,7 +330,7 @@ impl VectoristsApp {
                             ui.heading(self.active_tab.title());
                             ui.label(
                                 egui::RichText::new(self.active_tab.description())
-                                    .size(13.0)
+                                    .size(13.5)
                                     .color(colors::TEXT_MUTED),
                             );
                         });
@@ -315,7 +340,7 @@ impl VectoristsApp {
                     ui.heading(self.active_tab.title());
                     ui.label(
                         egui::RichText::new(self.active_tab.description())
-                            .size(13.0)
+                            .size(13.5)
                             .color(colors::TEXT_MUTED),
                     );
                     self.profile_controls(ui);
@@ -323,12 +348,13 @@ impl VectoristsApp {
                 ui.add_space(16.0);
                 if let Some((message, true)) = &self.save_status {
                     Frame::new()
-                        .fill(colors::ALERT_AMBER_FAINT)
-                        .corner_radius(6)
-                        .inner_margin(12)
+                        .fill(colors::DANGER_FAINT)
+                        .stroke(Stroke::new(1.0, colors::DANGER))
+                        .corner_radius(10)
+                        .inner_margin(14)
                         .show(ui, |ui| {
                             ui.set_width(ui.available_width());
-                            ui.label(egui::RichText::new(message).color(colors::ALERT_AMBER));
+                            ui.label(egui::RichText::new(message).color(colors::DANGER));
                         });
                     ui.add_space(8.0);
                 }
@@ -349,7 +375,15 @@ impl VectoristsApp {
                                 .calibrator_view
                                 .ui(ui, self.profile_manager.active_profile_mut()),
                             ActiveTab::Settings => {
-                                self.settings_view.ui(ui, &mut self.profile_manager)
+                                let old_accent = self.theme_accent;
+                                self.settings_view.ui(
+                                    ui,
+                                    &mut self.profile_manager,
+                                    &mut self.theme_accent,
+                                );
+                                if self.theme_accent != old_accent {
+                                    apply_theme_with_accent(ui.ctx(), self.theme_accent.color());
+                                }
                             }
                         }
                         ui.add_space(8.0);
@@ -389,6 +423,7 @@ mod tests {
             calibrator_view: CalibratorView::default(),
             settings_view: SettingsView::default(),
             raw_listener: None,
+            theme_accent: ThemeAccent::default(),
             save_status: None,
         }
     }

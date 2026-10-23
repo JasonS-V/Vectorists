@@ -124,11 +124,11 @@ impl DashboardView {
             });
             ui.horizontal_wrapped(|ui| {
                 for (color, text) in [
-                    (colors::ACCENT_CYAN, "— Curva efectiva"),
-                    (colors::ALERT_AMBER, "● Ajustes por eje"),
+                    (colors::ACCENT, "— Curva efectiva"),
+                    (colors::WARNING, "● Ajustes por eje"),
                     (colors::TEXT_FAINT, "○ Referencia 1:1"),
                 ] {
-                    ui.label(egui::RichText::new(text).size(11.0).color(color));
+                    ui.label(egui::RichText::new(text).size(11.5).color(color));
                 }
             });
             ui.separator();
@@ -136,18 +136,19 @@ impl DashboardView {
                 if let Some(i) = self.selected_dir_index {
                     ui.label(
                         egui::RichText::new(format!("EJE {:.1}°", i as f32 * 22.5))
-                            .size(11.0)
+                            .size(11.5)
                             .color(colors::TEXT_MUTED),
                     );
                     ui.label(
                         egui::RichText::new(format!("{:.3}×", profile.direction_multipliers[i]))
                             .monospace()
-                            .color(colors::ACCENT_CYAN),
+                            .strong()
+                            .color(colors::ACCENT),
                     );
                 } else {
                     ui.label(
                         egui::RichText::new("16 ejes de ajuste")
-                            .size(12.0)
+                            .size(12.5)
                             .color(colors::TEXT_MUTED),
                     );
                 }
@@ -184,7 +185,7 @@ impl DashboardView {
                     ),
                 ] {
                     let active = profile.direction_multipliers == multipliers;
-                    if pill_chip(ui, label, active, colors::ACCENT_CYAN) {
+                    if pill_chip(ui, label, active, colors::ACCENT) {
                         profile.direction_multipliers = multipliers;
                         profile.recompute_fourier();
                     }
@@ -192,12 +193,13 @@ impl DashboardView {
             });
             ui.add_space(4.0);
             ui.horizontal(|ui| {
-                ui.label("Intensidad");
+                ui.label(egui::RichText::new("Intensidad").color(colors::TEXT_SECONDARY));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.label(
                         egui::RichText::new(format!("{:.0}%", profile.strength * 100.0))
                             .monospace()
-                            .color(colors::ACCENT_CYAN),
+                            .strong()
+                            .color(colors::ACCENT),
                     );
                 });
             });
@@ -303,9 +305,10 @@ impl DashboardView {
                 });
             });
             let (rect, response) =
-                ui.allocate_exact_size(egui::vec2(ui.available_width(), 112.0), Sense::drag());
+                ui.allocate_exact_size(egui::vec2(ui.available_width(), 120.0), Sense::drag());
             let p = ui.painter_at(rect);
-            p.rect_filled(rect, 6, colors::SIDEBAR_BG);
+            p.rect_filled(rect, 10, colors::SIDEBAR_BG);
+            p.rect_stroke(rect, 10, Stroke::new(1.0, colors::BORDER_SUBTLE), egui::StrokeKind::Inside);
             for x in (16..rect.width() as usize).step_by(20) {
                 for y in (16..rect.height() as usize).step_by(20) {
                     p.circle_filled(
@@ -335,13 +338,13 @@ impl DashboardView {
             for (from, to) in &self.sandbox_trail {
                 p.line_segment(
                     [rect.min + *from, rect.min + *to],
-                    Stroke::new(1.7, colors::ACCENT_CYAN),
+                    Stroke::new(2.0, colors::ACCENT),
                 );
             }
             if let Some(cursor) = self.test_cursor {
                 let cursor = (rect.min + cursor)
                     .clamp(rect.min + Vec2::splat(5.0), rect.max - Vec2::splat(5.0));
-                p.circle_filled(cursor, 4.0, colors::ALERT_AMBER);
+                p.circle_filled(cursor, 5.0, colors::WARNING);
             } else {
                 p.text(
                     rect.center(),

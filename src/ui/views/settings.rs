@@ -1,7 +1,7 @@
 //! Profile library, device parameters and transparent local exports.
 use crate::core::profile::{Profile, ProfileManager};
-use crate::ui::theme::colors;
-use crate::ui::widgets::{card_container, pill_chip, primary_button, section_heading};
+use crate::ui::theme::{colors, ThemeAccent};
+use crate::ui::widgets::{card_container, pill_chip, primary_button, secondary_button, section_heading};
 use eframe::egui;
 
 #[derive(Default)]
@@ -11,23 +11,35 @@ pub struct SettingsView {
 }
 
 impl SettingsView {
-    pub fn ui(&mut self, ui: &mut egui::Ui, manager: &mut ProfileManager) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, manager: &mut ProfileManager, theme_accent: &mut ThemeAccent) {
         if let Some((message, error)) = &self.status_message {
             egui::Frame::new()
                 .fill(if *error {
-                    colors::ALERT_AMBER_FAINT
+                    colors::DANGER_FAINT
                 } else {
-                    colors::SUCCESS_GREEN_FAINT
+                    colors::SUCCESS_FAINT
                 })
-                .corner_radius(6)
-                .inner_margin(12)
+                .stroke(egui::Stroke::new(
+                    1.0,
+                    if *error {
+                        colors::DANGER
+                    } else {
+                        colors::SUCCESS
+                    },
+                ))
+                .corner_radius(10)
+                .inner_margin(14)
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
-                    ui.label(egui::RichText::new(message).size(13.0).color(if *error {
-                        colors::ALERT_AMBER
-                    } else {
-                        colors::SUCCESS_GREEN
-                    }));
+                    ui.label(
+                        egui::RichText::new(message)
+                            .size(13.0)
+                            .color(if *error {
+                                colors::DANGER
+                            } else {
+                                colors::SUCCESS
+                            }),
+                    );
                 });
             ui.add_space(4.0);
         }
@@ -43,12 +55,14 @@ impl SettingsView {
                 );
                 ui.vertical(|ui| {
                     ui.set_width(width - 302.0);
+                    self.theme_selector(ui, theme_accent);
                     self.device_settings(ui, manager.active_profile_mut());
                     self.exports(ui, manager.active_profile());
                 });
             });
         } else {
             self.profile_library(ui, manager);
+            self.theme_selector(ui, theme_accent);
             self.device_settings(ui, manager.active_profile_mut());
             self.exports(ui, manager.active_profile());
         }
@@ -61,10 +75,41 @@ impl SettingsView {
             );
             ui.label(
                 egui::RichText::new(
-                    "Diseñado por Aizendev  ·  Rust + egui  ·  Almacenamiento local",
+                    "Estándar Premium Minimal Dark Dashboard  ·  Rust + egui  ·  Almacenamiento local",
                 )
                 .size(12.0)
                 .color(colors::TEXT_FAINT),
+            );
+        });
+    }
+
+    fn theme_selector(&mut self, ui: &mut egui::Ui, theme_accent: &mut ThemeAccent) {
+        let width = ui.available_width();
+        card_container(ui, |ui| {
+            ui.set_width(width - 34.0);
+            section_heading(
+                ui,
+                "Diseño y Variante de Acento",
+                "Estándar Premium Minimal Dark Dashboard. Elige tu acento rector.",
+            );
+            ui.add_space(4.0);
+            ui.horizontal_wrapped(|ui| {
+                for (accent, label, preview_color) in [
+                    (ThemeAccent::GraphiteBlue, "Azul Grafito (Workspace)", colors::ACCENT_BLUE),
+                    (ThemeAccent::SoftViolet, "Violeta Suave (SaaS)", colors::ACCENT_VIOLET),
+                    (ThemeAccent::MidnightGold, "Oro Champagne (Fintech)", colors::ACCENT_GOLD),
+                ] {
+                    let active = *theme_accent == accent;
+                    if pill_chip(ui, label, active, preview_color) {
+                        *theme_accent = accent;
+                    }
+                }
+            });
+            ui.add_space(2.0);
+            ui.label(
+                egui::RichText::new("Acento activo según la directriz de 1 único color rector de la Guía de Estilo.")
+                    .size(11.5)
+                    .color(colors::TEXT_MUTED),
             );
         });
     }
@@ -94,7 +139,7 @@ impl SettingsView {
                                     egui::Button::selectable(
                                         active,
                                         egui::RichText::new(&profile.name).color(if active {
-                                            colors::ACCENT_CYAN
+                                            colors::ACCENT
                                         } else {
                                             colors::TEXT_PRIMARY
                                         }),
@@ -121,7 +166,7 @@ impl SettingsView {
                 manager.set_active(selected);
             }
             ui.separator();
-            ui.label(egui::RichText::new("Crear un perfil").size(13.0).strong());
+            ui.label(egui::RichText::new("Crear un perfil").size(13.0).strong().color(colors::TEXT_PRIMARY));
             let label = ui.label(
                 egui::RichText::new("Nombre del nuevo perfil")
                     .size(12.0)
@@ -192,7 +237,7 @@ impl SettingsView {
                         ui,
                         &dpi.to_string(),
                         profile.dpi == dpi,
-                        colors::ACCENT_CYAN,
+                        colors::ACCENT,
                     ) {
                         profile.dpi = dpi;
                     }
@@ -216,7 +261,7 @@ impl SettingsView {
                         ui,
                         &format!("{rate} Hz"),
                         profile.polling_rate_hz == rate,
-                        colors::ACCENT_CYAN,
+                        colors::ACCENT,
                     ) {
                         profile.polling_rate_hz = rate;
                     }
@@ -242,7 +287,7 @@ impl SettingsView {
                 "Exporta el perfil para una integración externa.",
             );
             ui.add_space(4.0);
-            ui.label(egui::RichText::new("Configuración JSON").strong());
+            ui.label(egui::RichText::new("Configuración JSON").strong().color(colors::TEXT_PRIMARY));
             ui.label(
                 egui::RichText::new(
                     "Parámetros del perfil, coeficientes de Fourier y tabla direccional.",
@@ -250,7 +295,7 @@ impl SettingsView {
                 .size(12.0)
                 .color(colors::TEXT_MUTED),
             );
-            if ui.button("Exportar configuración .json").clicked() {
+            if secondary_button(ui, "Exportar configuración .json").clicked() {
                 match profile.export_rawaccel_json() {
                     Ok(data) => self.write_export(profile, "rawaccel", "json", &data),
                     Err(error) => {
@@ -260,13 +305,13 @@ impl SettingsView {
                 }
             }
             ui.separator();
-            ui.label(egui::RichText::new("Tabla de respuesta CSV").strong());
+            ui.label(egui::RichText::new("Tabla de respuesta CSV").strong().color(colors::TEXT_PRIMARY));
             ui.label(
                 egui::RichText::new("360 ángulos con sus multiplicadores originales y efectivos.")
                     .size(12.0)
                     .color(colors::TEXT_MUTED),
             );
-            if ui.button("Exportar tabla de 360° .csv").clicked() {
+            if secondary_button(ui, "Exportar tabla de 360° .csv").clicked() {
                 self.write_export(profile, "lut", "csv", &profile.export_polar_lut_csv());
             }
             ui.add_space(4.0);

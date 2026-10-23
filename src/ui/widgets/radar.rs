@@ -127,7 +127,7 @@ impl Widget for PolarRadarWidget<'_> {
             .collect();
         // A triangle fan supports concave radial curves as well as the neutral circle.
         let mut mesh = egui::Mesh::default();
-        let fill = Color32::from_rgba_unmultiplied(89, 223, 211, 15);
+        let fill = Color32::from_rgba_unmultiplied(colors::ACCENT.r(), colors::ACCENT.g(), colors::ACCENT.b(), 24);
         mesh.colored_vertex(center, fill);
         for point in &curve {
             mesh.colored_vertex(*point, fill);
@@ -138,7 +138,7 @@ impl Widget for PolarRadarWidget<'_> {
         painter.add(egui::Shape::mesh(mesh));
         painter.add(egui::Shape::closed_line(
             curve,
-            Stroke::new(2.0, colors::ACCENT_CYAN),
+            Stroke::new(2.0, colors::ACCENT),
         ));
         let raw: Vec<_> = self
             .profile
@@ -151,18 +151,18 @@ impl Widget for PolarRadarWidget<'_> {
             .collect();
         painter.add(egui::Shape::closed_line(
             raw.clone(),
-            Stroke::new(1.0, Color32::from_rgba_unmultiplied(239, 184, 104, 90)),
+            Stroke::new(1.0, Color32::from_rgba_unmultiplied(colors::WARNING.r(), colors::WARNING.g(), colors::WARNING.b(), 110)),
         ));
         for (i, point) in raw.iter().enumerate() {
             let selected = self.selected_index == Some(i);
             if selected {
-                painter.line_segment([center, *point], Stroke::new(1.0, colors::ACCENT_CYAN));
-                painter.circle_stroke(*point, 8.0, Stroke::new(1.0, colors::ACCENT_CYAN));
+                painter.line_segment([center, *point], Stroke::new(1.0, colors::ACCENT));
+                painter.circle_stroke(*point, 8.0, Stroke::new(1.0, colors::ACCENT));
             }
             painter.circle_filled(
                 *point,
-                if selected { 4.0 } else { 2.5 },
-                colors::ALERT_AMBER,
+                if selected { 4.5 } else { 3.0 },
+                colors::WARNING,
             );
         }
         painter.circle_filled(center, 3.0, colors::TEXT_PRIMARY);
@@ -172,7 +172,7 @@ impl Widget for PolarRadarWidget<'_> {
                 let angle = delta.y.atan2(delta.x).rem_euclid(TWO_PI);
                 painter.line_segment(
                     [center, center + delta.normalized() * radius],
-                    Stroke::new(1.0, colors::ACCENT_CYAN),
+                    Stroke::new(1.0, colors::ACCENT),
                 );
                 return response.on_hover_ui_at_pointer(|ui| {
                     ui.strong(format!("Dirección {:.1}°", angle.to_degrees()));
