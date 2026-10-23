@@ -7,13 +7,14 @@ use crate::core::accumulator::SubpixelAccumulator;
 use crate::core::profile::{NUM_DIRECTIONS, Profile};
 use crate::ui::theme::colors;
 use crate::ui::widgets::PolarRadarWidget;
-use eframe::egui::{self, Pos2, Sense, Stroke, Vec2};
+use eframe::egui::{self, Color32, Pos2, Sense, Stroke, Vec2};
 
 pub struct DashboardView {
     pub selected_dir_index: Option<usize>,
     pub sandbox_accumulator: SubpixelAccumulator,
     pub sandbox_trail: Vec<(Pos2, Pos2)>,
     pub test_cursor: Pos2,
+    pub last_delta: (i32, i32),
 }
 
 impl Default for DashboardView {
@@ -23,6 +24,7 @@ impl Default for DashboardView {
             sandbox_accumulator: SubpixelAccumulator::new(),
             sandbox_trail: Vec::new(),
             test_cursor: Pos2::new(100.0, 100.0),
+            last_delta: (0, 0),
         }
     }
 }
@@ -30,23 +32,23 @@ impl Default for DashboardView {
 impl DashboardView {
     pub fn ui(&mut self, ui: &mut egui::Ui, profile: &mut Profile) {
         ui.horizontal(|ui| {
-            // Left Column: Polar Radar Widget
+            // Left Column: Polar Radar Widget & Diagnostics
             ui.vertical(|ui| {
                 ui.group(|ui| {
                     ui.set_width(340.0);
                     ui.horizontal(|ui| {
                         ui.heading(
-                            egui::RichText::new("MAPA POLAR 360°")
-                                .size(14.0)
+                            egui::RichText::new("360° POLAR RESPONSE MAP")
+                                .size(13.0)
                                 .color(colors::TEXT_PRIMARY),
                         );
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            let status_text = if profile.is_active {
-                                egui::RichText::new("● ACTIVO").color(colors::SUCCESS_GREEN).size(11.0)
+                            let (badge_text, badge_color) = if profile.is_active {
+                                ("● ACTIVE", colors::SUCCESS_GREEN)
                             } else {
-                                egui::RichText::new("○ EN ESPERA").color(colors::TEXT_MUTED).size(11.0)
+                                ("○ PAUSED", colors::TEXT_FAINT)
                             };
-                            ui.label(status_text);
+                            ui.label(egui::RichText::new(badge_text).color(badge_color).monospace().size(10.5));
                         });
                     });
 
@@ -59,11 +61,13 @@ impl DashboardView {
 
                     ui.separator();
 
-                    // Legend
+                    // Legend & Interpretation
                     ui.horizontal(|ui| {
-                        ui.label(egui::RichText::new("— Base (1:1)").color(colors::BORDER_STRONG).size(10.0));
-                        ui.label(egui::RichText::new("● Medido").color(colors::ALERT_AMBER).size(10.0));
-                        ui.label(egui::RichText::new("— Corregido").color(colors::ACCENT_CYAN).size(10.0));
+                        ui.label(egui::RichText::new("— Baseline (1:1)").color(colors::BORDER_STRONG).size(10.0));
+                        ui.add_space(4.0);
+                        ui.label(egui::RichText::new("● Raw Anatomy").color(colors::ALERT_AMBER).size(10.0));
+                        ui.add_space(4.0);
+                        ui.label(egui::RichText::new("— Fourier Curve").color(colors::ACCENT_CYAN).size(10.0));
                     });
                 });
             });
@@ -74,21 +78,17 @@ impl DashboardView {
             ui.vertical(|ui| {
                 ui.group(|ui| {
                     ui.horizontal(|ui| {
-                        ui.label(
-                            egui::RichText::new("PERFIL:")
-                                .color(colors::TEXT_MUTED)
-                                .size(11.0),
-                        );
+                        ui.label(egui::RichText::new("PROFILE:").color(colors::TEXT_MUTED).size(10.5));
                         ui.label(
                             egui::RichText::new(&profile.name)
                                 .color(colors::ACCENT_CYAN)
                                 .strong()
-                                .size(13.0),
+                                .size(12.5),
                         );
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             ui.label(
                                 egui::RichText::new(format!("{} DPI | {} Hz", profile.dpi, profile.polling_rate_hz))
-                                    .color(colors::TEXT_FAINT)
+                                    .color(colors::TEXT_MUTED)
                                     .monospace()
                                     .size(10.0),
                             );
@@ -97,9 +97,9 @@ impl DashboardView {
 
                     ui.add_space(4.0);
 
-                    // Strength Slider
+                    // Strength Slider (α)
                     ui.horizontal(|ui| {
-                        ui.label(egui::RichText::new("Fuerza de Asistencia:").color(colors::TEXT_PRIMARY).size(11.0));
+                        ui.label(egui::RichText::new("Compensation Strength (α):").color(colors::TEXT_PRIMARY).size(11.0));
                         let pct = (profile.strength * 100.0).round() as i32;
                         ui.label(
                             egui::RichText::new(format!("{}%", pct))
@@ -114,7 +114,7 @@ impl DashboardView {
                         profile.strength = strength_val;
                     }
 
-                    ui.add_space(6.0);
+                    ui.add_space(4.0);
                     ui.separator();
 
                     // Biomechanical metrics summary
@@ -137,23 +137,23 @@ impl DashboardView {
 
                     ui.horizontal(|ui| {
                         ui.vertical(|ui| {
-                            ui.label(egui::RichText::new("Déficit Máx (Undershoot):").color(colors::TEXT_MUTED).size(10.0));
+                            ui.label(egui::RichText::new("Max Undershoot Axis:").color(colors::TEXT_MUTED).size(10.0));
                             let delta = (*max_val - 1.0) * 100.0;
                             ui.label(
-                                egui::RichText::new(format!("{:>5.1}°  ({:+4.1}%)", max_deg, delta))
+                                egui::RichText::new(format!("{:>5.1}° ({:+4.1}%)", max_deg, delta))
                                     .color(colors::ACCENT_CYAN)
                                     .monospace()
                                     .size(11.0),
                             );
                         });
 
-                        ui.add_space(16.0);
+                        ui.add_space(20.0);
 
                         ui.vertical(|ui| {
-                            ui.label(egui::RichText::new("Exceso Máx (Overshoot):").color(colors::TEXT_MUTED).size(10.0));
+                            ui.label(egui::RichText::new("Max Overshoot Axis:").color(colors::TEXT_MUTED).size(10.0));
                             let delta = (*min_val - 1.0) * 100.0;
                             ui.label(
-                                egui::RichText::new(format!("{:>5.1}°  ({:+4.1}%)", min_deg, delta))
+                                egui::RichText::new(format!("{:>5.1}° ({:+4.1}%)", min_deg, delta))
                                     .color(colors::ALERT_AMBER)
                                     .monospace()
                                     .size(11.0),
@@ -167,21 +167,21 @@ impl DashboardView {
                 // Manual 16-Direction Tuning Area
                 ui.group(|ui| {
                     ui.horizontal(|ui| {
-                        ui.label(egui::RichText::new("CALIBRACIÓN MANUAL (16 EJES)").size(11.0).color(colors::TEXT_PRIMARY));
+                        ui.label(egui::RichText::new("MANUAL 16-AXIS TUNING").size(10.5).color(colors::TEXT_PRIMARY));
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if ui.button(egui::RichText::new("Restablecer 1:1").size(10.0)).clicked() {
+                            if ui.button(egui::RichText::new("Reset 1:1").size(9.5)).clicked() {
                                 profile.direction_multipliers = [1.0; NUM_DIRECTIONS];
                                 profile.recompute_fourier();
                             }
                         });
                     });
 
-                    ui.add_space(4.0);
+                    ui.add_space(2.0);
 
-                    egui::ScrollArea::vertical().max_height(140.0).show(ui, |ui| {
+                    egui::ScrollArea::vertical().max_height(135.0).show(ui, |ui| {
                         egui::Grid::new("directions_grid")
                             .num_columns(4)
-                            .spacing([8.0, 4.0])
+                            .spacing([8.0, 3.5])
                             .striped(true)
                             .show(ui, |ui| {
                                 for i in 0..NUM_DIRECTIONS {
@@ -214,7 +214,7 @@ impl DashboardView {
                                     ui.label(
                                         egui::RichText::new(format!("{:>4.2}x ({:+4.0}%)", mult, delta_pct))
                                             .monospace()
-                                            .size(10.0)
+                                            .size(9.5)
                                             .color(if delta_pct >= 0.0 {
                                                 colors::ACCENT_CYAN
                                             } else {
@@ -233,12 +233,20 @@ impl DashboardView {
                 // Interactive Vector Sandbox
                 ui.group(|ui| {
                     ui.horizontal(|ui| {
-                        ui.label(egui::RichText::new("SIMULADOR DE ENTRADA").size(11.0).color(colors::TEXT_PRIMARY));
+                        ui.label(egui::RichText::new("LIVE VECTOR SIMULATOR").size(10.5).color(colors::TEXT_PRIMARY));
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if ui.button(egui::RichText::new("Limpiar Trazo").size(10.0)).clicked() {
+                            if ui.button(egui::RichText::new("Clear Trail").size(9.5)).clicked() {
                                 self.sandbox_trail.clear();
                                 self.sandbox_accumulator.reset();
+                                self.last_delta = (0, 0);
                             }
+                            let (dx, dy) = self.last_delta;
+                            ui.label(
+                                egui::RichText::new(format!("Δx: {:+3}, Δy: {:+3}", dx, dy))
+                                    .monospace()
+                                    .size(9.5)
+                                    .color(colors::TEXT_FAINT),
+                            );
                         });
                     });
 
@@ -251,20 +259,31 @@ impl DashboardView {
 
                     let center = rect.center();
 
+                    // Subtle crosshair
+                    painter.line_segment(
+                        [Pos2::new(center.x, rect.top() + 6.0), Pos2::new(center.x, rect.bottom() - 6.0)],
+                        Stroke::new(0.5, Color32::from_rgba_premultiplied(0x23, 0x27, 0x33, 0x40)),
+                    );
+                    painter.line_segment(
+                        [Pos2::new(rect.left() + 6.0, center.y), Pos2::new(rect.right() - 6.0, center.y)],
+                        Stroke::new(0.5, Color32::from_rgba_premultiplied(0x23, 0x27, 0x33, 0x40)),
+                    );
+
                     // If dragging inside sandbox
                     if response.dragged() {
                         let delta = response.drag_delta();
                         if delta.length_sq() > 0.0 {
                             let (corr_dx, corr_dy) = profile.fourier.correct_delta(delta.x, delta.y, profile.strength);
                             let (out_dx, out_dy) = self.sandbox_accumulator.apply(corr_dx, corr_dy);
+                            self.last_delta = (out_dx, out_dy);
 
                             let new_pos = Pos2::new(
-                                (self.test_cursor.x + out_dx as f32).clamp(rect.left() + 4.0, rect.right() - 4.0),
-                                (self.test_cursor.y + out_dy as f32).clamp(rect.top() + 4.0, rect.bottom() - 4.0),
+                                (self.test_cursor.x + out_dx as f32).clamp(rect.left() + 6.0, rect.right() - 6.0),
+                                (self.test_cursor.y + out_dy as f32).clamp(rect.top() + 6.0, rect.bottom() - 6.0),
                             );
 
                             self.sandbox_trail.push((self.test_cursor, new_pos));
-                            if self.sandbox_trail.len() > 100 {
+                            if self.sandbox_trail.len() > 120 {
                                 self.sandbox_trail.remove(0);
                             }
                             self.test_cursor = new_pos;
@@ -273,9 +292,9 @@ impl DashboardView {
                         self.test_cursor = center;
                     }
 
-                    // Draw trail
+                    // Draw motion trail
                     for (from, to) in &self.sandbox_trail {
-                        painter.line_segment([*from, *to], Stroke::new(1.5, colors::ACCENT_CYAN));
+                        painter.line_segment([*from, *to], Stroke::new(1.4, colors::ACCENT_CYAN));
                     }
 
                     // Draw current cursor position
@@ -286,7 +305,7 @@ impl DashboardView {
                         painter.text(
                             center,
                             egui::Align2::CENTER_CENTER,
-                            "Arrastra el ratón aquí para probar el vector en tiempo real",
+                            "Drag pointer here to test compensated sub-pixel vector response",
                             egui::FontId::proportional(11.0),
                             colors::TEXT_FAINT,
                         );

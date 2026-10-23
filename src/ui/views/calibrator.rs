@@ -7,7 +7,7 @@
 use crate::core::math::TWO_PI;
 use crate::core::profile::{NUM_DIRECTIONS, Profile};
 use crate::ui::theme::colors;
-use eframe::egui::{self, Color32, Sense, Stroke, Vec2};
+use eframe::egui::{self, Color32, Pos2, Sense, Stroke, Vec2};
 use std::time::Instant;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -50,7 +50,7 @@ impl Default for CalibratorView {
 
 impl CalibratorView {
     pub fn start_calibration(&mut self) {
-        // Create an interleaved test sequence for natural motor responses (e.g. 0, 8, 4, 12, etc.)
+        // Interleaved test sequence to balance muscle fatigue and directional predictability
         let mut seq = Vec::new();
         // Cardinals first
         seq.extend_from_slice(&[0, 8, 4, 12]);
@@ -64,39 +64,39 @@ impl CalibratorView {
         self.measured_multipliers = [1.0; NUM_DIRECTIONS];
         self.measured_settle_ms = [0.0; NUM_DIRECTIONS];
         self.state = CalibratorState::WaitingForCenter;
-        self.last_feedback = Some("Haz clic en el centro para iniciar la secuencia.".to_string());
+        self.last_feedback = Some("Click center reticle to begin diagnostic sequence.".to_string());
     }
 
     pub fn ui(&mut self, ui: &mut egui::Ui, profile: &mut Profile) {
         ui.vertical(|ui| {
-            // Header
+            // Header Bar
             ui.horizontal(|ui| {
                 ui.heading(
-                    egui::RichText::new("CALIBRADOR BIOMECÁNICO RADIAL")
-                        .size(14.0)
+                    egui::RichText::new("RADIAL FLICK CALIBRATION ENGINE")
+                        .size(13.0)
                         .color(colors::TEXT_PRIMARY),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     match self.state {
                         CalibratorState::Idle => {
-                            if ui.button(egui::RichText::new("Iniciar Calibración").strong().color(colors::ACCENT_CYAN)).clicked() {
+                            if ui.button(egui::RichText::new("Start Calibration (16 Axes)").strong().color(colors::ACCENT_CYAN)).clicked() {
                                 self.start_calibration();
                             }
                         }
                         CalibratorState::Completed => {
-                            if ui.button(egui::RichText::new("Repetir Test").color(colors::TEXT_MUTED)).clicked() {
-                                self.start_calibration();
-                            }
-                            if ui.button(egui::RichText::new("Aplicar al Perfil Activo").strong().color(colors::ACCENT_CYAN)).clicked() {
+                            if ui.button(egui::RichText::new("Apply to Active Profile").strong().color(colors::ACCENT_CYAN)).clicked() {
                                 profile.direction_multipliers = self.measured_multipliers;
                                 profile.recompute_fourier();
-                                self.last_feedback = Some("¡Perfil actualizado con éxito!".to_string());
+                                self.last_feedback = Some("Profile successfully calibrated and updated.".to_string());
+                            }
+                            if ui.button(egui::RichText::new("Retest").color(colors::TEXT_MUTED)).clicked() {
+                                self.start_calibration();
                             }
                         }
                         _ => {
-                            if ui.button(egui::RichText::new("Cancelar").color(colors::ALERT_AMBER)).clicked() {
+                            if ui.button(egui::RichText::new("Abort Test").color(colors::ALERT_AMBER)).clicked() {
                                 self.state = CalibratorState::Idle;
-                                self.last_feedback = Some("Calibración cancelada.".to_string());
+                                self.last_feedback = Some("Calibration aborted by user.".to_string());
                             }
                         }
                     }
@@ -105,25 +105,25 @@ impl CalibratorView {
 
             ui.separator();
 
-            // Instructions / Status Bar
+            // Progress & Status Bar
             ui.horizontal(|ui| {
                 let progress_text = match self.state {
-                    CalibratorState::Idle => "Listo para comenzar. Duración estimada: ~2 minutos.".to_string(),
+                    CalibratorState::Idle => "Ready. Estimated test time: ~90 seconds.".to_string(),
                     CalibratorState::WaitingForCenter => format!(
-                        "Paso {} de {}: Haz clic en el círculo central.",
+                        "Target [{}/{}]: Click center anchor to spawn target.",
                         self.sequence_cursor + 1,
                         NUM_DIRECTIONS
                     ),
                     CalibratorState::TargetActive { direction_index, .. } => {
                         let deg = direction_index as f32 * 22.5;
                         format!(
-                            "Paso {} de {}: Realiza un flick hacia el objetivo ({:>5.1}°).",
+                            "Target [{}/{}]: Instinctive flick towards target at {:>5.1}°.",
                             self.sequence_cursor + 1,
                             NUM_DIRECTIONS,
                             deg
                         )
                     }
-                    CalibratorState::Completed => "¡Calibración completada! Revisa las métricas y aplica el perfil.".to_string(),
+                    CalibratorState::Completed => "Diagnostic complete. Review metrics and commit changes below.".to_string(),
                 };
 
                 ui.label(egui::RichText::new(progress_text).size(11.0).color(colors::TEXT_PRIMARY));
@@ -137,8 +137,8 @@ impl CalibratorView {
 
             ui.add_space(4.0);
 
-            // Test Arena Area
-            let arena_height = ui.available_height() - 20.0;
+            // Test Arena Canvas
+            let arena_height = ui.available_height() - 16.0;
             let (rect, response) = ui.allocate_exact_size(
                 Vec2::new(ui.available_width(), arena_height.max(340.0)),
                 Sense::click(),
@@ -146,33 +146,40 @@ impl CalibratorView {
 
             let painter = ui.painter_at(rect);
             let center = rect.center();
-            let target_radius_dist = 140.0; // Distance of targets from center
+            let target_radius_dist = 140.0; // Fixed radius distance for standardized benchmark
 
             // Arena Background
             painter.rect_filled(rect, 4.0, colors::CHASSIS_BG);
             painter.rect_stroke(rect, 4.0, Stroke::new(1.0, colors::BORDER_SUBTLE), egui::StrokeKind::Inside);
 
-            // Concentric guide rings
+            // Concentric guide rings & axes
             painter.circle_stroke(center, target_radius_dist, Stroke::new(1.0, colors::BORDER_SUBTLE));
             painter.circle_stroke(center, target_radius_dist * 0.5, Stroke::new(0.5, Color32::from_rgba_premultiplied(0x23, 0x27, 0x33, 0x50)));
 
-            // State-dependent rendering and click logic
+            painter.line_segment(
+                [Pos2::new(center.x, rect.top() + 10.0), Pos2::new(center.x, rect.bottom() - 10.0)],
+                Stroke::new(0.5, Color32::from_rgba_premultiplied(0x23, 0x27, 0x33, 0x40)),
+            );
+            painter.line_segment(
+                [Pos2::new(rect.left() + 10.0, center.y), Pos2::new(rect.right() - 10.0, center.y)],
+                Stroke::new(0.5, Color32::from_rgba_premultiplied(0x23, 0x27, 0x33, 0x40)),
+            );
+
+            // State Machine Rendering
             match self.state {
                 CalibratorState::Idle => {
-                    // Informational preview
-                    painter.circle_filled(center, 12.0, colors::PANEL_BG_LIGHT);
-                    painter.circle_stroke(center, 12.0, Stroke::new(1.5, colors::BORDER_STRONG));
+                    painter.circle_filled(center, 14.0, colors::PANEL_BG_LIGHT);
+                    painter.circle_stroke(center, 14.0, Stroke::new(1.5, colors::BORDER_STRONG));
                     painter.text(
-                        center + Vec2::new(0.0, 40.0),
+                        center + Vec2::new(0.0, 46.0),
                         egui::Align2::CENTER_CENTER,
-                        "Presiona 'Iniciar Calibración' en la esquina superior para comenzar",
-                        egui::FontId::proportional(12.0),
+                        "Press 'Start Calibration' to measure your hand's directional kinematics",
+                        egui::FontId::proportional(11.5),
                         colors::TEXT_MUTED,
                     );
                 }
 
                 CalibratorState::WaitingForCenter => {
-                    // Pulsing center anchor
                     let center_radius = 16.0;
                     let is_hovered = response.hover_pos().map_or(false, |p| (p - center).length() <= center_radius);
 
@@ -183,20 +190,19 @@ impl CalibratorView {
                     };
 
                     painter.circle_filled(center, center_radius, fill_color);
-                    painter.circle_stroke(center, center_radius + 4.0, Stroke::new(1.0, colors::ACCENT_CYAN_FAINT));
+                    painter.circle_stroke(center, center_radius + 4.0, Stroke::new(1.2, colors::ACCENT_CYAN_FAINT));
 
                     painter.text(
                         center,
                         egui::Align2::CENTER_CENTER,
-                        "CLIC",
-                        egui::FontId::monospace(10.0),
+                        "CLICK",
+                        egui::FontId::monospace(9.5),
                         colors::CHASSIS_BG,
                     );
 
                     if response.clicked() {
                         if let Some(click_pos) = response.interact_pointer_pos() {
                             if (click_pos - center).length() <= center_radius + 8.0 {
-                                // Transition to TargetActive
                                 let dir_idx = self.direction_sequence[self.sequence_cursor];
                                 let angle_rad = dir_idx as f32 * (TWO_PI / NUM_DIRECTIONS as f32);
                                 self.state = CalibratorState::TargetActive {
@@ -210,14 +216,13 @@ impl CalibratorView {
                 }
 
                 CalibratorState::TargetActive { direction_index, angle_rad, spawn_time } => {
-                    // Target position
                     let target_pos = center + Vec2::new(angle_rad.cos(), angle_rad.sin()) * target_radius_dist;
-                    let target_radius = 18.0;
+                    let target_radius = 16.0;
 
-                    // Draw center ghost
+                    // Center ghost marker
                     painter.circle_stroke(center, 6.0, Stroke::new(1.0, colors::BORDER_STRONG));
 
-                    // Draw target
+                    // Target rings (optical bullseye)
                     painter.circle_filled(target_pos, target_radius, colors::ALERT_AMBER);
                     painter.circle_stroke(target_pos, target_radius + 4.0, Stroke::new(1.5, colors::ALERT_AMBER_FAINT));
                     painter.circle_filled(target_pos, 4.0, colors::CHASSIS_BG);
@@ -227,9 +232,7 @@ impl CalibratorView {
                             let click_dist = (click_pos - center).length();
                             let elapsed_ms = spawn_time.elapsed().as_secs_f32() * 1000.0;
 
-                            // If click was roughly in the direction of the target
                             if click_dist > 20.0 {
-                                // Multiplier = Ideal Distance / Actual Distance
                                 let raw_ratio = target_radius_dist / click_dist;
                                 let clamped_mult = raw_ratio.clamp(0.70, 1.35);
 
@@ -238,11 +241,11 @@ impl CalibratorView {
 
                                 let overshoot_pct = (click_dist / target_radius_dist - 1.0) * 100.0;
                                 let feedback_str = if overshoot_pct.abs() < 5.0 {
-                                    format!("¡Tiro perfecto! ({:+.1}% / {:.0}ms)", overshoot_pct, elapsed_ms)
+                                    format!("Bullseye! ({:+.1}% / {:.0}ms)", overshoot_pct, elapsed_ms)
                                 } else if overshoot_pct > 0.0 {
-                                    format!("Overshoot: {:+.1}% (Frenada: {:.0}ms)", overshoot_pct, elapsed_ms)
+                                    format!("Overshoot: {:+.1}% (Settling: {:.0}ms)", overshoot_pct, elapsed_ms)
                                 } else {
-                                    format!("Undershoot: {:+.1}% (Frenada: {:.0}ms)", overshoot_pct, elapsed_ms)
+                                    format!("Undershoot: {:+.1}% (Settling: {:.0}ms)", overshoot_pct, elapsed_ms)
                                 };
                                 self.last_feedback = Some(feedback_str);
 
@@ -258,20 +261,19 @@ impl CalibratorView {
                 }
 
                 CalibratorState::Completed => {
-                    // Summary panel inside arena
                     let avg_settle: f32 = self.measured_settle_ms.iter().sum::<f32>() / (NUM_DIRECTIONS as f32);
                     painter.text(
-                        center - Vec2::new(0.0, 60.0),
+                        center - Vec2::new(0.0, 50.0),
                         egui::Align2::CENTER_CENTER,
-                        "RESULTADOS DEL DIAGNÓSTICO BIOMECÁNICO",
+                        "BIOMECHANICAL DIAGNOSTIC RESULTS",
                         egui::FontId::proportional(14.0),
                         colors::TEXT_PRIMARY,
                     );
 
                     painter.text(
-                        center - Vec2::new(0.0, 30.0),
+                        center - Vec2::new(0.0, 24.0),
                         egui::Align2::CENTER_CENTER,
-                        format!("Tiempo promedio de asentamiento: {:.1} ms", avg_settle),
+                        format!("Mean Settling / Micro-correction Time: {:.1} ms", avg_settle),
                         egui::FontId::monospace(12.0),
                         colors::ACCENT_CYAN,
                     );
@@ -279,15 +281,15 @@ impl CalibratorView {
                     painter.text(
                         center + Vec2::new(0.0, 10.0),
                         egui::Align2::CENTER_CENTER,
-                        "Se ha ajustado una curva armónica continua de 360° para compensar tus ejes débiles.",
+                        "A 360-degree continuous harmonic curve has been fitted to neutralize your directional bias.",
                         egui::FontId::proportional(11.0),
                         colors::TEXT_MUTED,
                     );
 
                     painter.text(
-                        center + Vec2::new(0.0, 40.0),
+                        center + Vec2::new(0.0, 36.0),
                         egui::Align2::CENTER_CENTER,
-                        "Haz clic en 'Aplicar al Perfil Activo' arriba para activar los cambios.",
+                        "Click 'Apply to Active Profile' in the top bar to commit these calibration values.",
                         egui::FontId::proportional(11.0),
                         colors::ALERT_AMBER,
                     );

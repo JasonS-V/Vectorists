@@ -12,7 +12,7 @@ pub struct SettingsView {
 impl Default for SettingsView {
     fn default() -> Self {
         Self {
-            new_profile_name: "Nuevo Perfil".to_string(),
+            new_profile_name: "New Profile".to_string(),
             status_message: None,
         }
     }
@@ -21,21 +21,21 @@ impl Default for SettingsView {
 impl SettingsView {
     pub fn ui(&mut self, ui: &mut egui::Ui, manager: &mut ProfileManager) {
         ui.vertical(|ui| {
-            // Header
+            // Header Bar
             ui.horizontal(|ui| {
                 ui.heading(
-                    egui::RichText::new("GESTIÓN DE PERFILES Y EXPORTACIÓN")
-                        .size(14.0)
+                    egui::RichText::new("PROFILE CONFIGURATION & EXPORT")
+                        .size(13.0)
                         .color(colors::TEXT_PRIMARY),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button(egui::RichText::new("Guardar Perfiles en Disco").color(colors::ACCENT_CYAN)).clicked() {
+                    if ui.button(egui::RichText::new("Save Profiles to Disk").color(colors::ACCENT_CYAN)).clicked() {
                         match manager.save_to_default_file() {
                             Ok(_) => {
-                                self.status_message = Some(("Perfiles guardados correctamente en disco.".to_string(), false));
+                                self.status_message = Some(("Profiles saved to disk successfully.".to_string(), false));
                             }
                             Err(e) => {
-                                self.status_message = Some((format!("Error al guardar: {}", e), true));
+                                self.status_message = Some((format!("Failed to save profiles: {}", e), true));
                             }
                         }
                     }
@@ -51,17 +51,17 @@ impl SettingsView {
             }
 
             ui.horizontal(|ui| {
-                // Left Column: Profile List
+                // Left Column: Profile Selector & Presets
                 ui.vertical(|ui| {
                     ui.group(|ui| {
                         ui.set_width(280.0);
-                        ui.label(egui::RichText::new("PERFILES DISPONIBLES").size(11.0).color(colors::TEXT_PRIMARY));
+                        ui.label(egui::RichText::new("AVAILABLE PROFILES").size(10.5).color(colors::TEXT_PRIMARY));
                         ui.separator();
 
                         let mut switch_to_id = None;
                         let active_id = manager.active_profile().id.clone();
 
-                        egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
+                        egui::ScrollArea::vertical().max_height(190.0).show(ui, |ui| {
                             for p in manager.profiles() {
                                 let is_active = p.id == active_id;
                                 let label_text = format!(
@@ -72,7 +72,7 @@ impl SettingsView {
 
                                 let text = egui::RichText::new(label_text)
                                     .color(if is_active { colors::ACCENT_CYAN } else { colors::TEXT_PRIMARY })
-                                    .size(12.0);
+                                    .size(11.5);
 
                                 if ui.selectable_label(is_active, text).clicked() {
                                     switch_to_id = Some(p.id.clone());
@@ -89,7 +89,7 @@ impl SettingsView {
                         // Add new profile
                         ui.horizontal(|ui| {
                             ui.text_edit_singleline(&mut self.new_profile_name);
-                            if ui.button(egui::RichText::new("Crear").size(10.0)).clicked() {
+                            if ui.button(egui::RichText::new("Add").size(9.5)).clicked() {
                                 if !self.new_profile_name.trim().is_empty() {
                                     let new_id = format!("custom-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
                                     let mut p = Profile::default();
@@ -97,8 +97,8 @@ impl SettingsView {
                                     p.name = self.new_profile_name.trim().to_string();
                                     manager.add_profile(p);
                                     manager.set_active_profile(&new_id);
-                                    self.status_message = Some((format!("Perfil '{}' creado.", self.new_profile_name), false));
-                                    self.new_profile_name = "Nuevo Perfil".to_string();
+                                    self.status_message = Some((format!("Profile '{}' created.", self.new_profile_name), false));
+                                    self.new_profile_name = "New Profile".to_string();
                                 }
                             }
                         });
@@ -106,19 +106,19 @@ impl SettingsView {
                         ui.add_space(4.0);
 
                         // Presets buttons
-                        ui.label(egui::RichText::new("Presets de Fábrica:").size(10.0).color(colors::TEXT_MUTED));
+                        ui.label(egui::RichText::new("Factory Presets:").size(10.0).color(colors::TEXT_MUTED));
                         ui.horizontal(|ui| {
-                            if ui.button(egui::RichText::new("+ Táctico CS2/Val").size(9.0)).clicked() {
+                            if ui.button(egui::RichText::new("+ CS2/Val Tactical").size(9.0)).clicked() {
                                 let p = Profile::preset_tactical_flick();
                                 manager.add_profile(p.clone());
                                 manager.set_active_profile(&p.id);
-                                self.status_message = Some(("Preset Táctico CS2/Valorant añadido.".to_string(), false));
+                                self.status_message = Some(("CS2/Valorant Tactical preset loaded.".to_string(), false));
                             }
-                            if ui.button(egui::RichText::new("+ Tracking Apex").size(9.0)).clicked() {
+                            if ui.button(egui::RichText::new("+ Apex Tracking").size(9.0)).clicked() {
                                 let p = Profile::preset_tracking_smooth();
                                 manager.add_profile(p.clone());
                                 manager.set_active_profile(&p.id);
-                                self.status_message = Some(("Preset Tracking Apex añadido.".to_string(), false));
+                                self.status_message = Some(("Apex Legends Tracking preset loaded.".to_string(), false));
                             }
                         });
                     });
@@ -131,18 +131,18 @@ impl SettingsView {
                     let active = manager.active_profile_mut();
 
                     ui.group(|ui| {
-                        ui.label(egui::RichText::new("PARÁMETROS DE HARDWARE").size(11.0).color(colors::TEXT_PRIMARY));
+                        ui.label(egui::RichText::new("HARDWARE SENSOR PARAMETERS").size(10.5).color(colors::TEXT_PRIMARY));
                         ui.separator();
 
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new("Nombre del Perfil:").size(11.0).color(colors::TEXT_MUTED));
+                            ui.label(egui::RichText::new("Profile Name:").size(11.0).color(colors::TEXT_MUTED));
                             ui.text_edit_singleline(&mut active.name);
                         });
 
                         ui.add_space(4.0);
 
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new("DPI Base del Sensor:").size(11.0).color(colors::TEXT_MUTED));
+                            ui.label(egui::RichText::new("Sensor Base DPI:").size(11.0).color(colors::TEXT_MUTED));
                             let dpis = [400, 800, 1600, 3200];
                             for d in dpis {
                                 if ui.selectable_label(active.dpi == d, format!("{}", d)).clicked() {
@@ -154,7 +154,7 @@ impl SettingsView {
                         ui.add_space(4.0);
 
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new("Frecuencia (Polling Rate):").size(11.0).color(colors::TEXT_MUTED));
+                            ui.label(egui::RichText::new("Polling Frequency:").size(11.0).color(colors::TEXT_MUTED));
                             let rates = [1000, 2000, 4000, 8000];
                             for r in rates {
                                 if ui.selectable_label(active.polling_rate_hz == r, format!("{} Hz", r)).clicked() {
@@ -166,14 +166,14 @@ impl SettingsView {
 
                     ui.add_space(8.0);
 
-                    // Export / Interop
+                    // Driver Interop & Export
                     ui.group(|ui| {
-                        ui.label(egui::RichText::new("EXPORTACIÓN & COMPATIBILIDAD EXTERNA").size(11.0).color(colors::TEXT_PRIMARY));
+                        ui.label(egui::RichText::new("DRIVER INTEROP & HARDWARE EXPORT").size(10.5).color(colors::TEXT_PRIMARY));
                         ui.separator();
 
                         ui.label(
                             egui::RichText::new(
-                                "Genera archivos listos para usar en drivers a nivel de kernel (RawAccel) o microcontroladores USB (RP2040)."
+                                "Generate ready-to-load configuration files for kernel-level mouse drivers (RawAccel) or hardware passthrough USB dongles (RP2040)."
                             )
                             .size(10.0)
                             .color(colors::TEXT_MUTED),
@@ -182,34 +182,34 @@ impl SettingsView {
                         ui.add_space(6.0);
 
                         ui.horizontal(|ui| {
-                            if ui.button(egui::RichText::new("Exportar a RawAccel (settings.json)").strong().color(colors::ACCENT_CYAN)).clicked() {
+                            if ui.button(egui::RichText::new("Export to RawAccel (settings.json)").strong().color(colors::ACCENT_CYAN)).clicked() {
                                 match active.export_rawaccel_json() {
                                     Ok(json_str) => {
                                         let filename = format!("rawaccel_{}.json", active.id);
                                         match std::fs::write(&filename, json_str) {
                                             Ok(_) => {
-                                                self.status_message = Some((format!("Configuración RawAccel exportada como '{}'.", filename), false));
+                                                self.status_message = Some((format!("RawAccel configuration exported as '{}'.", filename), false));
                                             }
                                             Err(e) => {
-                                                self.status_message = Some((format!("Error al escribir archivo: {}", e), true));
+                                                self.status_message = Some((format!("Failed to write file: {}", e), true));
                                             }
                                         }
                                     }
                                     Err(e) => {
-                                        self.status_message = Some((format!("Error al generar JSON: {}", e), true));
+                                        self.status_message = Some((format!("JSON serialization failed: {}", e), true));
                                     }
                                 }
                             }
 
-                            if ui.button(egui::RichText::new("Exportar Tabla LUT (CSV)").color(colors::TEXT_PRIMARY)).clicked() {
+                            if ui.button(egui::RichText::new("Export 360° LUT Table (CSV)").color(colors::TEXT_PRIMARY)).clicked() {
                                 let csv_str = active.export_polar_lut_csv();
                                 let filename = format!("lut_{}.csv", active.id);
                                 match std::fs::write(&filename, csv_str) {
                                     Ok(_) => {
-                                        self.status_message = Some((format!("Tabla LUT (360°) exportada como '{}'.", filename), false));
+                                        self.status_message = Some((format!("360-degree LUT table exported as '{}'.", filename), false));
                                     }
                                     Err(e) => {
-                                        self.status_message = Some((format!("Error al escribir CSV: {}", e), true));
+                                        self.status_message = Some((format!("Failed to write CSV: {}", e), true));
                                     }
                                 }
                             }
@@ -218,14 +218,14 @@ impl SettingsView {
 
                     ui.add_space(8.0);
 
-                    // Credits & Engine Info
+                    // Engine Metadata & Credits Card
                     ui.group(|ui| {
                         ui.horizontal(|ui| {
                             ui.label(egui::RichText::new("Vectorists v0.1.0").monospace().size(10.0).color(colors::TEXT_MUTED));
                             ui.label(egui::RichText::new("•").size(10.0).color(colors::BORDER_STRONG));
-                            ui.label(egui::RichText::new("Desarrollado por Aizendev").size(10.0).color(colors::TEXT_MUTED));
+                            ui.label(egui::RichText::new("Developed by Aizendev").size(10.0).color(colors::TEXT_MUTED));
                             ui.label(egui::RichText::new("•").size(10.0).color(colors::BORDER_STRONG));
-                            ui.label(egui::RichText::new("Motor: Rust Puro + eframe/wgpu").size(10.0).color(colors::ACCENT_CYAN));
+                            ui.label(egui::RichText::new("Engine: Pure Rust + eframe/wgpu").size(10.0).color(colors::ACCENT_CYAN));
                         });
                     });
                 });

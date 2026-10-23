@@ -46,7 +46,6 @@ impl VectoristsApp {
 
 impl eframe::App for VectoristsApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        // Root container with dark chassis fill and padding
         ui.vertical(|ui| {
             // 1. Top Navigation Bar
             Frame::new()
@@ -76,9 +75,9 @@ impl eframe::App for VectoristsApp {
 
                         // Tab Navigation Buttons
                         let tabs = [
-                            (ActiveTab::Dashboard, "✦ MAPA POLAR"),
-                            (ActiveTab::Calibrator, "▶ CALIBRADOR"),
-                            (ActiveTab::Settings, "⚙ PERFILES & AJUSTES"),
+                            (ActiveTab::Dashboard, "✦ POLAR MAP"),
+                            (ActiveTab::Calibrator, "▶ CALIBRATOR"),
+                            (ActiveTab::Settings, "⚙ SETTINGS & EXPORT"),
                         ];
 
                         for (tab, label) in tabs {
@@ -96,9 +95,9 @@ impl eframe::App for VectoristsApp {
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let active_profile = self.profile_manager.active_profile_mut();
                             let toggle_label = if active_profile.is_active {
-                                egui::RichText::new("CORRECCIÓN: ON").color(colors::SUCCESS_GREEN).size(11.0)
+                                egui::RichText::new("CORRECTION: ON").color(colors::SUCCESS_GREEN).size(10.5)
                             } else {
-                                egui::RichText::new("CORRECCIÓN: OFF").color(colors::ALERT_AMBER).size(11.0)
+                                egui::RichText::new("CORRECTION: OFF").color(colors::ALERT_AMBER).size(10.5)
                             };
 
                             if ui.button(toggle_label).clicked() {
@@ -106,7 +105,7 @@ impl eframe::App for VectoristsApp {
                             }
 
                             ui.label(
-                                egui::RichText::new(format!("Perfil: {}", active_profile.name))
+                                egui::RichText::new(format!("Profile: {}", active_profile.name))
                                     .size(11.0)
                                     .color(colors::TEXT_MUTED),
                             );
@@ -149,7 +148,7 @@ impl eframe::App for VectoristsApp {
                         let active = self.profile_manager.active_profile();
                         ui.label(
                             egui::RichText::new(format!(
-                                "Perfil: {} DPI | Polling: {} Hz | Fuerza: {:.0}%",
+                                "Config: {} DPI | {} Hz | Strength: {:.0}%",
                                 active.dpi,
                                 active.polling_rate_hz,
                                 active.strength * 100.0
@@ -164,9 +163,9 @@ impl eframe::App for VectoristsApp {
                         ui.add_space(8.0);
 
                         let hw_text = if telemetry.polling_rate_hz > 0 {
-                            format!("Sensor en vivo: {} Hz ({:.0} CPS)", telemetry.polling_rate_hz, telemetry.counts_per_sec)
+                            format!("Live Sensor: {} Hz ({:.0} CPS)", telemetry.polling_rate_hz, telemetry.counts_per_sec)
                         } else {
-                            "Sensor en vivo: Esperando entrada...".to_string()
+                            "Live Sensor: Idle (Move mouse to stream telemetry)".to_string()
                         };
 
                         ui.label(
@@ -178,7 +177,7 @@ impl eframe::App for VectoristsApp {
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             ui.label(
-                                egui::RichText::new("Latencia: < 0.02 ms | RAM: ~12 MB")
+                                egui::RichText::new("Latency: < 0.02 ms | RAM: ~12 MB | 0.0% CPU")
                                     .monospace()
                                     .size(10.0)
                                     .color(colors::TEXT_FAINT),
@@ -187,7 +186,7 @@ impl eframe::App for VectoristsApp {
                     });
                 });
 
-            // Request continuous 60Hz UI repaint when mouse moves
+            // Smooth UI repaint when streaming telemetry
             ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
         });
     }
