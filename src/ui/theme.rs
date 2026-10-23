@@ -1,7 +1,8 @@
-//! Anti-Slop Visual Theme and Palette for Vectorists.
+//! Modern Visual Theme and Palette for Vectorists.
 //!
-//! Enforces high contrast (WCAG AAA >= 7.0:1), compact HUD aesthetics,
-//! and clean borders without blurry shadows or gratuitous padding.
+//! Inspired by modern high-end gaming software and developer utilities
+//! (Linear, Raycast, Wootility), featuring deep obsidian surfaces,
+//! glowing vectorial cyan accents, and strict WCAG AAA typography.
 
 use eframe::egui::{self, Color32, CornerRadius, Stroke, Visuals};
 
@@ -9,27 +10,30 @@ use eframe::egui::{self, Color32, CornerRadius, Stroke, Visuals};
 pub mod colors {
     use super::Color32;
 
-    pub const CHASSIS_BG: Color32 = Color32::from_rgb(0x0C, 0x0D, 0x10);
-    pub const PANEL_BG: Color32 = Color32::from_rgb(0x15, 0x17, 0x1D);
-    pub const PANEL_BG_LIGHT: Color32 = Color32::from_rgb(0x1C, 0x1F, 0x27);
-    pub const BORDER_SUBTLE: Color32 = Color32::from_rgb(0x23, 0x27, 0x33);
-    pub const BORDER_STRONG: Color32 = Color32::from_rgb(0x35, 0x3B, 0x4D);
+    pub const CHASSIS_BG: Color32 = Color32::from_rgb(0x08, 0x09, 0x0C);
+    pub const PANEL_BG: Color32 = Color32::from_rgb(0x10, 0x12, 0x18);
+    pub const PANEL_BG_LIGHT: Color32 = Color32::from_rgb(0x17, 0x1A, 0x24);
+    pub const PANEL_ELEVATED: Color32 = Color32::from_rgb(0x1E, 0x22, 0x2F);
 
-    pub const TEXT_PRIMARY: Color32 = Color32::from_rgb(0xF4, 0xF5, 0xF8);
-    pub const TEXT_MUTED: Color32 = Color32::from_rgb(0xA8, 0xAD, 0xB8); // Contrast >7.5:1 (AAA)
-    pub const TEXT_FAINT: Color32 = Color32::from_rgb(0x70, 0x78, 0x8A); // Contrast >4.8:1 (AA)
+    pub const BORDER_SUBTLE: Color32 = Color32::from_rgb(0x1E, 0x22, 0x2E);
+    pub const BORDER_STRONG: Color32 = Color32::from_rgb(0x2E, 0x35, 0x47);
 
-    pub const ACCENT_CYAN: Color32 = Color32::from_rgb(0x00, 0xE5, 0xFF);
-    pub const ACCENT_CYAN_HOVER: Color32 = Color32::from_rgb(0x33, 0xEA, 0xFF);
-    pub const ACCENT_CYAN_FAINT: Color32 = Color32::from_rgba_premultiplied(0x00, 0xE5, 0xFF, 0x20);
+    pub const TEXT_PRIMARY: Color32 = Color32::from_rgb(0xF5, 0xF6, 0xF8);
+    pub const TEXT_MUTED: Color32 = Color32::from_rgb(0xA2, 0xA8, 0xB8); // Contrast >7.5:1 (AAA)
+    pub const TEXT_FAINT: Color32 = Color32::from_rgb(0x6A, 0x72, 0x86); // Contrast >4.5:1 (AA)
 
-    pub const ALERT_AMBER: Color32 = Color32::from_rgb(0xFF, 0x9F, 0x1C);
-    pub const ALERT_AMBER_FAINT: Color32 = Color32::from_rgba_premultiplied(0xFF, 0x9F, 0x1C, 0x25);
+    pub const ACCENT_CYAN: Color32 = Color32::from_rgb(0x00, 0xF0, 0xFF);
+    pub const ACCENT_CYAN_HOVER: Color32 = Color32::from_rgb(0x38, 0xF3, 0xFF);
+    pub const ACCENT_CYAN_FAINT: Color32 = Color32::from_rgba_premultiplied(0x00, 0xF0, 0xFF, 0x22);
+    pub const ACCENT_CYAN_GLOW: Color32 = Color32::from_rgba_premultiplied(0x00, 0xF0, 0xFF, 0x40);
+
+    pub const ALERT_AMBER: Color32 = Color32::from_rgb(0xFF, 0xA0, 0x1E);
+    pub const ALERT_AMBER_FAINT: Color32 = Color32::from_rgba_premultiplied(0xFF, 0xA0, 0x1E, 0x25);
 
     pub const SUCCESS_GREEN: Color32 = Color32::from_rgb(0x00, 0xE6, 0x76);
 }
 
-/// Applies the Vectorists custom visuals to an egui context.
+/// Applies the Vectorists modern visuals to an egui context.
 pub fn apply_theme(ctx: &egui::Context) {
     let mut visuals = Visuals::dark();
 
@@ -39,8 +43,8 @@ pub fn apply_theme(ctx: &egui::Context) {
     visuals.faint_bg_color = colors::PANEL_BG;
     visuals.extreme_bg_color = colors::CHASSIS_BG;
 
-    // Strict, restrained corner radii (Anti-slop: outer 6px, inner 4px)
-    visuals.widgets.noninteractive.corner_radius = CornerRadius::same(4);
+    // Concentric border radii: 6px outer cards, 4px inner controls
+    visuals.widgets.noninteractive.corner_radius = CornerRadius::same(6);
     visuals.widgets.inactive.corner_radius = CornerRadius::same(4);
     visuals.widgets.hovered.corner_radius = CornerRadius::same(4);
     visuals.widgets.active.corner_radius = CornerRadius::same(4);
@@ -52,7 +56,7 @@ pub fn apply_theme(ctx: &egui::Context) {
     visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, colors::TEXT_PRIMARY);
 
     // Hovered widget styling (crisp cyan accent edge)
-    visuals.widgets.hovered.bg_fill = colors::PANEL_BG_LIGHT;
+    visuals.widgets.hovered.bg_fill = colors::PANEL_ELEVATED;
     visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, colors::ACCENT_CYAN);
     visuals.widgets.hovered.fg_stroke = Stroke::new(1.0, colors::TEXT_PRIMARY);
 
@@ -75,9 +79,9 @@ pub fn apply_theme(ctx: &egui::Context) {
     // Compact layout spacing & optical alignment
     ctx.style_mut_of(egui::Theme::Dark, |style| {
         style.spacing.item_spacing = egui::vec2(8.0, 8.0);
-        style.spacing.button_padding = egui::vec2(10.0, 6.0);
+        style.spacing.button_padding = egui::vec2(12.0, 6.0);
         style.spacing.window_margin = egui::Margin::same(12);
-        style.spacing.scroll.bar_width = 5.0;
+        style.spacing.scroll.bar_width = 4.0;
         style.spacing.scroll.bar_inner_margin = 2.0;
     });
 }

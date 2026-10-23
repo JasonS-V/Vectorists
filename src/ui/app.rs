@@ -4,6 +4,7 @@ use crate::core::profile::ProfileManager;
 use crate::input::RawInputListener;
 use crate::ui::theme::{apply_theme, colors};
 use crate::ui::views::{CalibratorView, DashboardView, SettingsView};
+use crate::ui::widgets::toggle_switch;
 use eframe::egui::{self, Frame, Stroke};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -46,84 +47,102 @@ impl VectoristsApp {
 
 impl eframe::App for VectoristsApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let telemetry = self.raw_listener.as_ref().map(|l| l.telemetry()).unwrap_or_default();
+
         ui.vertical(|ui| {
-            // 1. Top Navigation Bar
+            // 1. Top Modern Floating Dock / Header
             Frame::new()
                 .fill(colors::CHASSIS_BG)
                 .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
                 .inner_margin(egui::Margin::symmetric(14, 8))
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        // App Logo & Branding
-                        ui.label(
-                            egui::RichText::new("VECTORISTS")
-                                .size(14.0)
-                                .strong()
-                                .color(colors::TEXT_PRIMARY),
-                        );
+                        // Branding with glowing indicator
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                egui::RichText::new("VECTORISTS")
+                                    .size(14.0)
+                                    .strong()
+                                    .color(colors::TEXT_PRIMARY),
+                            );
+                            ui.label(
+                                egui::RichText::new("v0.1.0")
+                                    .size(9.5)
+                                    .monospace()
+                                    .color(colors::ACCENT_CYAN),
+                            );
+                        });
 
-                        ui.label(
-                            egui::RichText::new("v0.1.0")
-                                .size(10.0)
-                                .monospace()
-                                .color(colors::TEXT_FAINT),
-                        );
-
-                        ui.add_space(12.0);
+                        ui.add_space(16.0);
                         ui.separator();
-                        ui.add_space(12.0);
+                        ui.add_space(16.0);
 
-                        // Tab Navigation Buttons
+                        // Modern Segmented Pill Dock
                         let tabs = [
-                            (ActiveTab::Dashboard, "✦ POLAR MAP"),
-                            (ActiveTab::Calibrator, "▶ CALIBRATOR"),
-                            (ActiveTab::Settings, "⚙ SETTINGS & EXPORT"),
+                            (ActiveTab::Dashboard, "✦  POLAR MAP"),
+                            (ActiveTab::Calibrator, "🎯  CALIBRATOR"),
+                            (ActiveTab::Settings, "⚙  SETTINGS"),
                         ];
 
                         for (tab, label) in tabs {
                             let is_active = self.active_tab == tab;
-                            let text = egui::RichText::new(label)
-                                .size(11.0)
+                            let btn_text = egui::RichText::new(label)
+                                .size(10.5)
+                                .strong()
                                 .color(if is_active { colors::ACCENT_CYAN } else { colors::TEXT_MUTED });
 
-                            if ui.selectable_label(is_active, text).clicked() {
+                            if ui.selectable_label(is_active, btn_text).clicked() {
                                 self.active_tab = tab;
                             }
                         }
 
-                        // Right-aligned active profile status & toggle
+                        // Right-aligned Modern Toggle Switch & Active Profile Name
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let active_profile = self.profile_manager.active_profile_mut();
-                            let toggle_label = if active_profile.is_active {
-                                egui::RichText::new("CORRECTION: ON").color(colors::SUCCESS_GREEN).size(10.5)
-                            } else {
-                                egui::RichText::new("CORRECTION: OFF").color(colors::ALERT_AMBER).size(10.5)
-                            };
+                            let is_on = active_profile.is_active;
+                            let switch_label = if is_on { "CORRECTION" } else { "BYPASS" };
 
-                            if ui.button(toggle_label).clicked() {
-                                active_profile.is_active = !active_profile.is_active;
-                            }
+                            toggle_switch(
+                                ui,
+                                &mut active_profile.is_active,
+                                switch_label,
+                            );
+
+                            ui.add_space(12.0);
+                            ui.separator();
+                            ui.add_space(12.0);
 
                             ui.label(
-                                egui::RichText::new(format!("Profile: {}", active_profile.name))
+                                egui::RichText::new(&active_profile.name)
                                     .size(11.0)
                                     .color(colors::TEXT_MUTED),
+                            );
+                            ui.label(
+                                egui::RichText::new("PROFILE:")
+                                    .size(9.5)
+                                    .monospace()
+                                    .color(colors::TEXT_FAINT),
                             );
                         });
                     });
                 });
 
-            ui.add_space(4.0);
+            ui.add_space(6.0);
 
             // 2. Central Content Area
-            let content_height = ui.available_height() - 32.0;
+            let content_height = ui.available_height() - 36.0;
             egui::ScrollArea::both()
                 .max_height(content_height)
                 .show(ui, |ui| {
                     let active_profile = self.profile_manager.active_profile_mut();
                     match self.active_tab {
                         ActiveTab::Dashboard => {
-                            self.dashboard_view.ui(ui, active_profile);
+                            self.dashboard_view.ui(
+                                ui,
+                                active_profile,
+                                telemetry.polling_rate_hz,
+                                telemetry.counts_per_sec,
+                            );
                         }
                         ActiveTab::Calibrator => {
                             self.calibrator_view.ui(ui, active_profile);
@@ -136,57 +155,51 @@ impl eframe::App for VectoristsApp {
 
             ui.add_space(4.0);
 
-            // 3. Bottom Status Bar with Hardware Telemetry
-            let telemetry = self.raw_listener.as_ref().map(|l| l.telemetry()).unwrap_or_default();
-
+            // 3. Modern Telemetry Status Bar
             Frame::new()
                 .fill(colors::CHASSIS_BG)
                 .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
-                .inner_margin(egui::Margin::symmetric(14, 4))
+                .inner_margin(egui::Margin::symmetric(14, 5))
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
                         let active = self.profile_manager.active_profile();
+
+                        // Sensor status pill
                         ui.label(
-                            egui::RichText::new(format!(
-                                "Config: {} DPI | {} Hz | Strength: {:.0}%",
-                                active.dpi,
-                                active.polling_rate_hz,
-                                active.strength * 100.0
-                            ))
-                            .monospace()
-                            .size(10.0)
-                            .color(colors::TEXT_FAINT),
+                            egui::RichText::new(format!("SENS: {} DPI | {} Hz", active.dpi, active.polling_rate_hz))
+                                .monospace()
+                                .size(9.5)
+                                .color(colors::TEXT_FAINT),
                         );
 
                         ui.add_space(8.0);
-                        ui.label(egui::RichText::new("•").size(10.0).color(colors::BORDER_STRONG));
+                        ui.label(egui::RichText::new("•").size(9.5).color(colors::BORDER_STRONG));
                         ui.add_space(8.0);
 
                         let hw_text = if telemetry.polling_rate_hz > 0 {
-                            format!("Live Sensor: {} Hz ({:.0} CPS)", telemetry.polling_rate_hz, telemetry.counts_per_sec)
+                            format!("LIVE: {} Hz ({:.0} CPS)", telemetry.polling_rate_hz, telemetry.counts_per_sec)
                         } else {
-                            "Live Sensor: Idle (Move mouse to stream telemetry)".to_string()
+                            "LIVE: IDLE (Move mouse to stream)".to_string()
                         };
 
                         ui.label(
                             egui::RichText::new(hw_text)
                                 .monospace()
-                                .size(10.0)
+                                .size(9.5)
                                 .color(colors::ACCENT_CYAN),
                         );
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             ui.label(
-                                egui::RichText::new("Latency: < 0.02 ms | RAM: ~12 MB | 0.0% CPU")
+                                egui::RichText::new("LATENCY: < 0.02ms | RAM: ~12 MB | PURE RUST")
                                     .monospace()
-                                    .size(10.0)
+                                    .size(9.5)
                                     .color(colors::TEXT_FAINT),
                             );
                         });
                     });
                 });
 
-            // Smooth UI repaint when streaming telemetry
             ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
         });
     }

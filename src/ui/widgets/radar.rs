@@ -1,7 +1,7 @@
-//! 360-degree Interactive Polar Radar Widget for Vectorists.
+//! 360-degree Interactive Tactical Polar Radar Widget for Vectorists.
 //!
-//! Renders the baseline unit circle, discrete 16-direction raw biomechanics,
-//! and continuous Fourier harmonic compensation curve with hover inspection.
+//! Renders concentric telemetry range rings, continuous glowing Fourier curve,
+//! raw biomechanical nodes, and interactive hover HUD inspection.
 
 use crate::core::math::TWO_PI;
 use crate::core::profile::{NUM_DIRECTIONS, Profile};
@@ -47,11 +47,12 @@ impl<'a> Widget for PolarRadarWidget<'a> {
         let max_radius = (rect.width().min(rect.height()) / 2.0) - 26.0;
         let base_radius = max_radius * 0.70; // 1.0 multiplier maps to 70% of radius
 
-        // 1. Radar Chassis & Background
-        painter.circle_filled(center, max_radius + 14.0, colors::PANEL_BG);
+        // 1. Radar Bezel & Background
+        painter.circle_filled(center, max_radius + 14.0, colors::CHASSIS_BG);
         painter.circle_stroke(center, max_radius + 14.0, Stroke::new(1.0, colors::BORDER_SUBTLE));
+        painter.circle_stroke(center, max_radius + 8.0, Stroke::new(0.5, Color32::from_rgba_premultiplied(0x1E, 0x22, 0x2E, 0x80)));
 
-        // 2. Concentric Reference Rings
+        // 2. Concentric Telemetry Range Rings
         let rings = [
             (0.50, "0.5x"),
             (0.75, "0.75x"),
@@ -63,25 +64,34 @@ impl<'a> Widget for PolarRadarWidget<'a> {
             let r = base_radius * scale;
             let is_base = (scale - 1.00).abs() < 1e-4;
 
-            let stroke = if is_base {
-                Stroke::new(1.5, colors::BORDER_STRONG) // Solid reference unit circle
+            if is_base {
+                // Dual glow stroke on baseline unit circle
+                painter.circle_stroke(
+                    center,
+                    r,
+                    Stroke::new(3.0, Color32::from_rgba_premultiplied(0x00, 0xF0, 0xFF, 0x18)),
+                );
+                painter.circle_stroke(center, r, Stroke::new(1.2, colors::BORDER_STRONG));
             } else {
-                Stroke::new(0.8, Color32::from_rgba_premultiplied(0x23, 0x27, 0x33, 0x90))
-            };
-            painter.circle_stroke(center, r, stroke);
+                painter.circle_stroke(
+                    center,
+                    r,
+                    Stroke::new(0.6, Color32::from_rgba_premultiplied(0x1E, 0x22, 0x2E, 0x80)),
+                );
+            }
 
             // Ring label placed along the upward axis
-            let text_pos = Pos2::new(center.x + 4.0, center.y - r - 2.0);
+            let text_pos = Pos2::new(center.x + 5.0, center.y - r - 2.0);
             painter.text(
                 text_pos,
                 egui::Align2::LEFT_BOTTOM,
                 label,
                 egui::FontId::monospace(8.5),
-                if is_base { colors::TEXT_MUTED } else { colors::TEXT_FAINT },
+                if is_base { colors::ACCENT_CYAN } else { colors::TEXT_FAINT },
             );
         }
 
-        // 3. 16 Radial Rays & Compass Heading Labels
+        // 3. 16 Radial Rays & 8 Compass Direction Markers
         let step_angle = TWO_PI / (NUM_DIRECTIONS as f32);
         for i in 0..NUM_DIRECTIONS {
             let angle = (i as f32) * step_angle;
@@ -94,13 +104,13 @@ impl<'a> Widget for PolarRadarWidget<'a> {
             let stroke = if is_cardinal {
                 Stroke::new(1.0, colors::BORDER_STRONG)
             } else if is_intercardinal {
-                Stroke::new(0.6, Color32::from_rgba_premultiplied(0x23, 0x27, 0x33, 0x80))
+                Stroke::new(0.6, Color32::from_rgba_premultiplied(0x1E, 0x22, 0x2E, 0x90))
             } else {
-                Stroke::new(0.4, Color32::from_rgba_premultiplied(0x23, 0x27, 0x33, 0x40))
+                Stroke::new(0.4, Color32::from_rgba_premultiplied(0x1E, 0x22, 0x2E, 0x40))
             };
             painter.line_segment([center, outer_pos], stroke);
 
-            // 8 Compass Direction Labels
+            // Compass Markers
             if is_intercardinal {
                 let compass_text = match i {
                     0 => "0° E",
@@ -134,17 +144,16 @@ impl<'a> Widget for PolarRadarWidget<'a> {
         }
 
         if raw_points.len() >= 3 {
-            // Draw discrete raw measurements line
             for i in 0..NUM_DIRECTIONS {
                 let next = (i + 1) % NUM_DIRECTIONS;
                 painter.line_segment(
                     [raw_points[i], raw_points[next]],
-                    Stroke::new(1.0, Color32::from_rgba_premultiplied(0xFF, 0x9F, 0x1C, 0x60)),
+                    Stroke::new(1.0, Color32::from_rgba_premultiplied(0xFF, 0xA0, 0x1E, 0x70)),
                 );
             }
         }
 
-        // 5. Continuous Fourier Fitted Curve (Vectorial Cyan filled polygon)
+        // 5. Continuous Fourier Curve (Multi-layered Glowing Cyan Polygon)
         const SAMPLES: usize = 128;
         let mut continuous_points = Vec::with_capacity(SAMPLES);
         for s in 0..SAMPLES {
@@ -157,14 +166,33 @@ impl<'a> Widget for PolarRadarWidget<'a> {
         }
 
         if continuous_points.len() >= 3 {
+            // Layer A: Soft ambient fill
             painter.add(egui::Shape::convex_polygon(
-                continuous_points,
-                Color32::from_rgba_premultiplied(0x00, 0xE5, 0xFF, 0x1A),
-                Stroke::new(1.8, colors::ACCENT_CYAN),
+                continuous_points.clone(),
+                Color32::from_rgba_premultiplied(0x00, 0xF0, 0xFF, 0x16),
+                Stroke::NONE,
             ));
+
+            // Layer B: Outer neon glow stroke
+            for i in 0..SAMPLES {
+                let next = (i + 1) % SAMPLES;
+                painter.line_segment(
+                    [continuous_points[i], continuous_points[next]],
+                    Stroke::new(3.5, Color32::from_rgba_premultiplied(0x00, 0xF0, 0xFF, 0x30)),
+                );
+            }
+
+            // Layer C: Sharp crisp vector line
+            for i in 0..SAMPLES {
+                let next = (i + 1) % SAMPLES;
+                painter.line_segment(
+                    [continuous_points[i], continuous_points[next]],
+                    Stroke::new(1.8, colors::ACCENT_CYAN),
+                );
+            }
         }
 
-        // 6. Discrete Measured Multiplier Nodes (Interactive Amber Dots)
+        // 6. Discrete Measured Multiplier Nodes (Interactive Amber Dots with halo)
         for i in 0..NUM_DIRECTIONS {
             let pt = raw_points[i];
             let is_selected = self.selected_index == Some(i);
@@ -178,18 +206,26 @@ impl<'a> Widget for PolarRadarWidget<'a> {
 
             // Glow / halo for selected node
             if is_selected {
-                painter.circle_stroke(pt, node_radius + 3.0, Stroke::new(1.0, colors::ACCENT_CYAN_FAINT));
+                painter.circle_stroke(pt, node_radius + 3.0, Stroke::new(1.2, colors::ACCENT_CYAN_GLOW));
             }
 
             painter.circle_filled(pt, node_radius, node_color);
             painter.circle_stroke(pt, node_radius + 1.0, Stroke::new(1.0, colors::PANEL_BG));
         }
 
-        // Center reticle
-        painter.circle_filled(center, 3.0, colors::TEXT_PRIMARY);
-        painter.circle_stroke(center, 4.0, Stroke::new(0.5, colors::BORDER_STRONG));
+        // 7. Tactical Center Reticle
+        painter.circle_filled(center, 3.5, colors::TEXT_PRIMARY);
+        painter.circle_stroke(center, 6.0, Stroke::new(1.0, colors::BORDER_STRONG));
+        painter.line_segment(
+            [Pos2::new(center.x - 8.0, center.y), Pos2::new(center.x + 8.0, center.y)],
+            Stroke::new(0.8, colors::ACCENT_CYAN),
+        );
+        painter.line_segment(
+            [Pos2::new(center.x, center.y - 8.0), Pos2::new(center.x, center.y + 8.0)],
+            Stroke::new(0.8, colors::ACCENT_CYAN),
+        );
 
-        // 7. Interactive Hover Ray & Detailed Tooltip
+        // 8. Interactive Hover Ray & Floating HUD Card
         if let Some(hover_pos) = response.hover_pos() {
             let diff = hover_pos - center;
             let dist = diff.length();
@@ -200,36 +236,44 @@ impl<'a> Widget for PolarRadarWidget<'a> {
                 }
                 let hover_deg = hover_angle.to_degrees();
 
-                // Draw ray towards cursor
+                // Draw laser ray towards cursor
                 let cursor_edge = center + diff.normalized() * (max_radius + 10.0);
-                painter.line_segment([center, cursor_edge], Stroke::new(1.0, colors::ACCENT_CYAN));
+                painter.line_segment(
+                    [center, cursor_edge],
+                    Stroke::new(1.2, colors::ACCENT_CYAN_HOVER),
+                );
 
                 let raw_val = self.profile.fourier.eval(hover_angle);
                 let eff_val = 1.0 + self.profile.strength * (raw_val - 1.0);
                 let delta_pct = (eff_val - 1.0) * 100.0;
 
                 response = response.on_hover_ui_at_pointer(|ui| {
-                    ui.label(
-                        egui::RichText::new(format!("Bearing: {:>5.1}°", hover_deg))
-                            .monospace()
-                            .strong()
-                            .color(colors::TEXT_PRIMARY),
-                    );
-                    ui.label(
-                        egui::RichText::new(format!("Effective Scale: {:>4.2}x ({:+5.1}%)", eff_val, delta_pct))
-                            .monospace()
-                            .color(if delta_pct >= 0.0 {
-                                colors::ACCENT_CYAN
-                            } else {
-                                colors::ALERT_AMBER
-                            }),
-                    );
-                    ui.label(
-                        egui::RichText::new(format!("Raw Measured:   {:>4.2}x", raw_val))
-                            .monospace()
-                            .size(10.0)
-                            .color(colors::TEXT_MUTED),
-                    );
+                    ui.group(|ui| {
+                        ui.label(
+                            egui::RichText::new(format!("BEARING: {:>5.1}°", hover_deg))
+                                .monospace()
+                                .strong()
+                                .size(11.0)
+                                .color(colors::TEXT_PRIMARY),
+                        );
+                        ui.separator();
+                        ui.label(
+                            egui::RichText::new(format!("Effective Scale: {:>4.2}x ({:+5.1}%)", eff_val, delta_pct))
+                                .monospace()
+                                .size(11.0)
+                                .color(if delta_pct >= 0.0 {
+                                    colors::ACCENT_CYAN
+                                } else {
+                                    colors::ALERT_AMBER
+                                }),
+                        );
+                        ui.label(
+                            egui::RichText::new(format!("Raw Measured:    {:>4.2}x", raw_val))
+                                .monospace()
+                                .size(10.0)
+                                .color(colors::TEXT_MUTED),
+                        );
+                    });
                 });
             }
         }
