@@ -1,0 +1,12 @@
+[package]
+name = "vectorists"
+version = "0.1.0"
+edition = "2024"
+description = "Directional sensitivity calibration and biomechanical mouse curve engine"
+authors = ["Aizendev"]
+
+[dependencies]
+eframe = { version = "0.37.0", default-features = false, features = ["default"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input", "Win32_System_Performance"] }
