@@ -57,18 +57,17 @@ impl eframe::App for VectoristsApp {
                 .inner_margin(egui::Margin::symmetric(14, 8))
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        // Branding with glowing indicator
+                        // Branding
                         ui.horizontal(|ui| {
                             ui.label(
                                 egui::RichText::new("VECTORISTS")
-                                    .size(14.0)
+                                    .size(13.5)
                                     .strong()
                                     .color(colors::TEXT_PRIMARY),
                             );
                             ui.label(
                                 egui::RichText::new("v0.1.0")
                                     .size(9.5)
-                                    .monospace()
                                     .color(colors::ACCENT_CYAN),
                             );
                         });
@@ -77,11 +76,11 @@ impl eframe::App for VectoristsApp {
                         ui.separator();
                         ui.add_space(16.0);
 
-                        // Modern Segmented Pill Dock
+                        // Modern Segmented Pill Dock - Strict No Emojis Rule
                         let tabs = [
-                            (ActiveTab::Dashboard, "✦  POLAR MAP"),
-                            (ActiveTab::Calibrator, "🎯  CALIBRATOR"),
-                            (ActiveTab::Settings, "⚙  SETTINGS"),
+                            (ActiveTab::Dashboard, "POLAR MAP"),
+                            (ActiveTab::Calibrator, "CALIBRATOR"),
+                            (ActiveTab::Settings, "SETTINGS"),
                         ];
 
                         for (tab, label) in tabs {
@@ -115,7 +114,6 @@ impl eframe::App for VectoristsApp {
                             ui.label(
                                 egui::RichText::new("PROFILE:")
                                     .size(9.5)
-                                    .monospace()
                                     .color(colors::TEXT_FAINT),
                             );
                         });
@@ -150,25 +148,24 @@ impl eframe::App for VectoristsApp {
 
             ui.add_space(4.0);
 
-            // 3. Modern Telemetry Status Bar
+            // 3. Modern Telemetry Status Bar (Clean Sans-Serif)
             Frame::new()
                 .fill(colors::CHASSIS_BG)
                 .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
-                .inner_margin(egui::Margin::symmetric(14, 5))
+                .inner_margin(egui::Margin::symmetric(14, 6))
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
                         let active = self.profile_manager.active_profile();
 
-                        // Sensor status pill
+                        // Sensor status
                         ui.label(
-                            egui::RichText::new(format!("SENS: {} DPI | {} Hz", active.dpi, active.polling_rate_hz))
-                                .monospace()
-                                .size(9.5)
+                            egui::RichText::new(format!("SENS: {} DPI · {} Hz", active.dpi, active.polling_rate_hz))
+                                .size(10.0)
                                 .color(colors::TEXT_FAINT),
                         );
 
                         ui.add_space(8.0);
-                        ui.label(egui::RichText::new("•").size(9.5).color(colors::BORDER_STRONG));
+                        ui.label(egui::RichText::new("·").size(10.0).color(colors::BORDER_STRONG));
                         ui.add_space(8.0);
 
                         let hw_text = if telemetry.polling_rate_hz > 0 {
@@ -179,16 +176,14 @@ impl eframe::App for VectoristsApp {
 
                         ui.label(
                             egui::RichText::new(hw_text)
-                                .monospace()
-                                .size(9.5)
+                                .size(10.0)
                                 .color(colors::ACCENT_CYAN),
                         );
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             ui.label(
-                                egui::RichText::new("LATENCY: < 0.02ms | RAM: ~12 MB | PURE RUST")
-                                    .monospace()
-                                    .size(9.5)
+                                egui::RichText::new("LATENCY: < 0.02ms  ·  RAM: ~12 MB  ·  PURE RUST")
+                                    .size(10.0)
                                     .color(colors::TEXT_FAINT),
                             );
                         });

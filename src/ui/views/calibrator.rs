@@ -80,22 +80,22 @@ impl CalibratorView {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     match self.state {
                         CalibratorState::Idle => {
-                            if pill_chip(ui, "▶ Start Calibration (16 Axes)", true, colors::ACCENT_CYAN) {
+                            if pill_chip(ui, "Start Calibration (16 Axes)", true, colors::ACCENT_CYAN) {
                                 self.start_calibration();
                             }
                         }
                         CalibratorState::Completed => {
-                            if pill_chip(ui, "✔ Apply to Active Profile", true, colors::ACCENT_CYAN) {
+                            if pill_chip(ui, "Apply to Active Profile", true, colors::ACCENT_CYAN) {
                                 profile.direction_multipliers = self.measured_multipliers;
                                 profile.recompute_fourier();
                                 self.last_feedback = Some("Profile successfully calibrated and updated.".to_string());
                             }
-                            if pill_chip(ui, "↻ Retest", false, colors::TEXT_MUTED) {
+                            if pill_chip(ui, "Retest", false, colors::TEXT_MUTED) {
                                 self.start_calibration();
                             }
                         }
                         _ => {
-                            if pill_chip(ui, "✖ Abort Test", false, colors::ALERT_AMBER) {
+                            if pill_chip(ui, "Abort Test", false, colors::ALERT_AMBER) {
                                 self.state = CalibratorState::Idle;
                                 self.last_feedback = Some("Calibration aborted by user.".to_string());
                             }
@@ -155,15 +155,15 @@ impl CalibratorView {
 
             // Concentric guide rings & axes
             painter.circle_stroke(center, target_radius_dist, Stroke::new(1.0, colors::BORDER_SUBTLE));
-            painter.circle_stroke(center, target_radius_dist * 0.5, Stroke::new(0.5, Color32::from_rgba_premultiplied(0x23, 0x27, 0x33, 0x50)));
+            painter.circle_stroke(center, target_radius_dist * 0.5, Stroke::new(0.5, Color32::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 12)));
 
             painter.line_segment(
                 [Pos2::new(center.x, rect.top() + 10.0), Pos2::new(center.x, rect.bottom() - 10.0)],
-                Stroke::new(0.5, Color32::from_rgba_premultiplied(0x23, 0x27, 0x33, 0x40)),
+                Stroke::new(0.5, Color32::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 10)),
             );
             painter.line_segment(
                 [Pos2::new(rect.left() + 10.0, center.y), Pos2::new(rect.right() - 10.0, center.y)],
-                Stroke::new(0.5, Color32::from_rgba_premultiplied(0x23, 0x27, 0x33, 0x40)),
+                Stroke::new(0.5, Color32::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 10)),
             );
 
             // State Machine Rendering
@@ -275,7 +275,7 @@ impl CalibratorView {
                         center - Vec2::new(0.0, 24.0),
                         egui::Align2::CENTER_CENTER,
                         format!("Mean Settling / Micro-correction Time: {:.1} ms", avg_settle),
-                        egui::FontId::monospace(12.0),
+                        egui::FontId::proportional(12.0),
                         colors::ACCENT_CYAN,
                     );
 

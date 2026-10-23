@@ -50,7 +50,7 @@ impl<'a> Widget for PolarRadarWidget<'a> {
         // 1. Radar Bezel & Background
         painter.circle_filled(center, max_radius + 14.0, colors::CHASSIS_BG);
         painter.circle_stroke(center, max_radius + 14.0, Stroke::new(1.0, colors::BORDER_SUBTLE));
-        painter.circle_stroke(center, max_radius + 8.0, Stroke::new(0.5, Color32::from_rgba_premultiplied(0x1E, 0x22, 0x2E, 0x80)));
+        painter.circle_stroke(center, max_radius + 8.0, Stroke::new(0.5, Color32::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 12)));
 
         // 2. Concentric Telemetry Range Rings
         let rings = [
@@ -65,18 +65,18 @@ impl<'a> Widget for PolarRadarWidget<'a> {
             let is_base = (scale - 1.00).abs() < 1e-4;
 
             if is_base {
-                // Dual glow stroke on baseline unit circle
+                // Subtle glow stroke on baseline unit circle
                 painter.circle_stroke(
                     center,
                     r,
-                    Stroke::new(3.0, Color32::from_rgba_premultiplied(0x00, 0xF0, 0xFF, 0x18)),
+                    Stroke::new(2.5, Color32::from_rgba_unmultiplied(0x00, 0xD8, 0xF6, 20)),
                 );
-                painter.circle_stroke(center, r, Stroke::new(1.2, colors::BORDER_STRONG));
+                painter.circle_stroke(center, r, Stroke::new(1.0, colors::BORDER_STRONG));
             } else {
                 painter.circle_stroke(
                     center,
                     r,
-                    Stroke::new(0.6, Color32::from_rgba_premultiplied(0x1E, 0x22, 0x2E, 0x80)),
+                    Stroke::new(0.6, Color32::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 10)),
                 );
             }
 
@@ -86,7 +86,7 @@ impl<'a> Widget for PolarRadarWidget<'a> {
                 text_pos,
                 egui::Align2::LEFT_BOTTOM,
                 label,
-                egui::FontId::monospace(8.5),
+                egui::FontId::proportional(8.5),
                 if is_base { colors::ACCENT_CYAN } else { colors::TEXT_FAINT },
             );
         }
@@ -102,11 +102,11 @@ impl<'a> Widget for PolarRadarWidget<'a> {
             let is_intercardinal = i % 2 == 0;
 
             let stroke = if is_cardinal {
-                Stroke::new(1.0, colors::BORDER_STRONG)
+                Stroke::new(0.8, colors::BORDER_STRONG)
             } else if is_intercardinal {
-                Stroke::new(0.6, Color32::from_rgba_premultiplied(0x1E, 0x22, 0x2E, 0x90))
+                Stroke::new(0.5, Color32::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 12))
             } else {
-                Stroke::new(0.4, Color32::from_rgba_premultiplied(0x1E, 0x22, 0x2E, 0x40))
+                Stroke::new(0.3, Color32::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 6))
             };
             painter.line_segment([center, outer_pos], stroke);
 
@@ -134,7 +134,7 @@ impl<'a> Widget for PolarRadarWidget<'a> {
             }
         }
 
-        // 4. Raw Biomechanical Measured Polygon (Amber dashed/connected outline)
+        // 4. Raw Biomechanical Measured Polygon (Amber line)
         let mut raw_points = Vec::with_capacity(NUM_DIRECTIONS);
         for i in 0..NUM_DIRECTIONS {
             let angle = (i as f32) * step_angle;
@@ -148,12 +148,12 @@ impl<'a> Widget for PolarRadarWidget<'a> {
                 let next = (i + 1) % NUM_DIRECTIONS;
                 painter.line_segment(
                     [raw_points[i], raw_points[next]],
-                    Stroke::new(1.0, Color32::from_rgba_premultiplied(0xFF, 0xA0, 0x1E, 0x70)),
+                    Stroke::new(1.0, Color32::from_rgba_unmultiplied(0xF5, 0x9E, 0x0B, 70)),
                 );
             }
         }
 
-        // 5. Continuous Fourier Curve (Multi-layered Glowing Cyan Polygon)
+        // 5. Continuous Fourier Curve (Delicate translucent ice-blue fill + crisp line)
         const SAMPLES: usize = 128;
         let mut continuous_points = Vec::with_capacity(SAMPLES);
         for s in 0..SAMPLES {
@@ -166,19 +166,19 @@ impl<'a> Widget for PolarRadarWidget<'a> {
         }
 
         if continuous_points.len() >= 3 {
-            // Layer A: Soft ambient fill
+            // Layer A: Soft ambient translucent fill (8% alpha, no blown-out neon)
             painter.add(egui::Shape::convex_polygon(
                 continuous_points.clone(),
-                Color32::from_rgba_premultiplied(0x00, 0xF0, 0xFF, 0x16),
+                Color32::from_rgba_unmultiplied(0x00, 0xD8, 0xF6, 14),
                 Stroke::NONE,
             ));
 
-            // Layer B: Outer neon glow stroke
+            // Layer B: Subtle halo stroke
             for i in 0..SAMPLES {
                 let next = (i + 1) % SAMPLES;
                 painter.line_segment(
                     [continuous_points[i], continuous_points[next]],
-                    Stroke::new(3.5, Color32::from_rgba_premultiplied(0x00, 0xF0, 0xFF, 0x30)),
+                    Stroke::new(3.0, Color32::from_rgba_unmultiplied(0x00, 0xD8, 0xF6, 32)),
                 );
             }
 
@@ -187,17 +187,17 @@ impl<'a> Widget for PolarRadarWidget<'a> {
                 let next = (i + 1) % SAMPLES;
                 painter.line_segment(
                     [continuous_points[i], continuous_points[next]],
-                    Stroke::new(1.8, colors::ACCENT_CYAN),
+                    Stroke::new(1.6, colors::ACCENT_CYAN),
                 );
             }
         }
 
-        // 6. Discrete Measured Multiplier Nodes (Interactive Amber Dots with halo)
+        // 6. Discrete Measured Multiplier Nodes (Refined amber dots)
         for i in 0..NUM_DIRECTIONS {
             let pt = raw_points[i];
             let is_selected = self.selected_index == Some(i);
 
-            let node_radius = if is_selected { 5.5 } else { 3.5 };
+            let node_radius = if is_selected { 5.0 } else { 3.0 };
             let node_color = if is_selected {
                 colors::ACCENT_CYAN
             } else {
@@ -213,19 +213,19 @@ impl<'a> Widget for PolarRadarWidget<'a> {
             painter.circle_stroke(pt, node_radius + 1.0, Stroke::new(1.0, colors::PANEL_BG));
         }
 
-        // 7. Tactical Center Reticle
-        painter.circle_filled(center, 3.5, colors::TEXT_PRIMARY);
-        painter.circle_stroke(center, 6.0, Stroke::new(1.0, colors::BORDER_STRONG));
+        // 7. Center Reticle
+        painter.circle_filled(center, 3.0, colors::TEXT_PRIMARY);
+        painter.circle_stroke(center, 5.0, Stroke::new(0.8, colors::BORDER_STRONG));
         painter.line_segment(
-            [Pos2::new(center.x - 8.0, center.y), Pos2::new(center.x + 8.0, center.y)],
+            [Pos2::new(center.x - 7.0, center.y), Pos2::new(center.x + 7.0, center.y)],
             Stroke::new(0.8, colors::ACCENT_CYAN),
         );
         painter.line_segment(
-            [Pos2::new(center.x, center.y - 8.0), Pos2::new(center.x, center.y + 8.0)],
+            [Pos2::new(center.x, center.y - 7.0), Pos2::new(center.x, center.y + 7.0)],
             Stroke::new(0.8, colors::ACCENT_CYAN),
         );
 
-        // 8. Interactive Hover Ray & Floating HUD Card
+        // 8. Interactive Hover Ray & Floating Inspection
         if let Some(hover_pos) = response.hover_pos() {
             let diff = hover_pos - center;
             let dist = diff.length();
@@ -250,8 +250,7 @@ impl<'a> Widget for PolarRadarWidget<'a> {
                 response = response.on_hover_ui_at_pointer(|ui| {
                     ui.group(|ui| {
                         ui.label(
-                            egui::RichText::new(format!("BEARING: {:>5.1}°", hover_deg))
-                                .monospace()
+                            egui::RichText::new(format!("Bearing: {:>5.1}°", hover_deg))
                                 .strong()
                                 .size(11.0)
                                 .color(colors::TEXT_PRIMARY),
@@ -259,7 +258,6 @@ impl<'a> Widget for PolarRadarWidget<'a> {
                         ui.separator();
                         ui.label(
                             egui::RichText::new(format!("Effective Scale: {:>4.2}x ({:+5.1}%)", eff_val, delta_pct))
-                                .monospace()
                                 .size(11.0)
                                 .color(if delta_pct >= 0.0 {
                                     colors::ACCENT_CYAN
@@ -269,7 +267,6 @@ impl<'a> Widget for PolarRadarWidget<'a> {
                         );
                         ui.label(
                             egui::RichText::new(format!("Raw Measured:    {:>4.2}x", raw_val))
-                                .monospace()
                                 .size(10.0)
                                 .color(colors::TEXT_MUTED),
                         );

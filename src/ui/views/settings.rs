@@ -65,11 +65,11 @@ impl SettingsView {
                         egui::ScrollArea::vertical().max_height(190.0).show(ui, |ui| {
                             for p in manager.profiles() {
                                 let is_active = p.id == active_id;
-                                let label_text = format!(
-                                    "{} {}",
-                                    if is_active { "●" } else { "○" },
-                                    p.name
-                                );
+                                let label_text = if is_active {
+                                    format!("{}  [Active]", p.name)
+                                } else {
+                                    p.name.clone()
+                                };
 
                                 let text = egui::RichText::new(label_text)
                                     .color(if is_active { colors::ACCENT_CYAN } else { colors::TEXT_PRIMARY })
@@ -109,13 +109,13 @@ impl SettingsView {
                         // Presets buttons
                         ui.label(egui::RichText::new("Factory Presets:").size(10.0).color(colors::TEXT_MUTED));
                         ui.horizontal(|ui| {
-                            if pill_chip(ui, "+ Tactical Flick", false, colors::ACCENT_CYAN) {
+                            if pill_chip(ui, "Tactical Flick", false, colors::ACCENT_CYAN) {
                                 let p = Profile::preset_tactical_flick();
                                 manager.add_profile(p.clone());
                                 manager.set_active_profile(&p.id);
                                 self.status_message = Some(("CS2/Valorant Tactical preset loaded.".to_string(), false));
                             }
-                            if pill_chip(ui, "+ Apex Smooth", false, colors::SUCCESS_GREEN) {
+                            if pill_chip(ui, "Apex Smooth", false, colors::SUCCESS_GREEN) {
                                 let p = Profile::preset_tracking_smooth();
                                 manager.add_profile(p.clone());
                                 manager.set_active_profile(&p.id);
@@ -222,10 +222,10 @@ impl SettingsView {
                     // Engine Metadata & Credits Card
                     card_container(ui, |ui| {
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new("Vectorists v0.1.0").monospace().size(10.0).color(colors::TEXT_MUTED));
-                            ui.label(egui::RichText::new("•").size(10.0).color(colors::BORDER_STRONG));
+                            ui.label(egui::RichText::new("Vectorists v0.1.0").size(10.0).color(colors::TEXT_MUTED));
+                            ui.label(egui::RichText::new("·").size(10.0).color(colors::BORDER_STRONG));
                             ui.label(egui::RichText::new("Developed by Aizendev").size(10.0).color(colors::TEXT_MUTED));
-                            ui.label(egui::RichText::new("•").size(10.0).color(colors::BORDER_STRONG));
+                            ui.label(egui::RichText::new("·").size(10.0).color(colors::BORDER_STRONG));
                             ui.label(egui::RichText::new("Engine: Pure Rust + eframe/wgpu").size(10.0).color(colors::ACCENT_CYAN));
                         });
                     });

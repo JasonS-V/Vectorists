@@ -1,17 +1,18 @@
 //! Modern custom UI widgets for Vectorists.
 //!
 //! Provides sleek, modern desktop controls:
-//! - ToggleSwitch (iOS/Fluent style animated pill toggle)
-//! - MetricCard (Hero statistics card with icon and badge)
+//! - ToggleSwitch (Fluent/macOS style animated pill toggle)
+//! - MetricCard (Hero statistics card with pill badge and clean typography)
 //! - ModernSlider (Ultra-thin track with glowing thumb and value pill)
-//! - SegmentedTabs (Floating pill navigation)
+//! - SegmentedTabs (Floating pill navigation, zero emojis)
+//! - DirectionMicroBar (Interactive 16-axis fader row)
 
 use crate::ui::theme::colors;
 use eframe::egui::{self, Color32, CornerRadius, Pos2, Rect, Sense, Stroke, Vec2};
 
-/// A modern iOS / Fluent style toggle switch.
+/// A modern Fluent/macOS style toggle switch.
 pub fn toggle_switch(ui: &mut egui::Ui, on: &mut bool, label: &str) -> egui::Response {
-    let desired_size = Vec2::new(36.0, 20.0);
+    let desired_size = Vec2::new(38.0, 20.0);
     let (rect, mut response) = ui.allocate_exact_size(desired_size, Sense::click());
 
     if response.clicked() {
@@ -46,7 +47,7 @@ pub fn toggle_switch(ui: &mut egui::Ui, on: &mut bool, label: &str) -> egui::Res
         };
         let thumb_pos = Pos2::new(thumb_x, rect.center().y);
 
-        // Thumb glow & circle
+        // Thumb shadow/glow
         if *on {
             painter.circle_stroke(
                 thumb_pos,
@@ -81,63 +82,81 @@ pub fn metric_card(
     subtext: &str,
     badge: Option<(&str, Color32)>,
 ) {
-    let height = 64.0;
-    let (rect, _) = ui.allocate_exact_size(Vec2::new(width, height), Sense::hover());
+    let height = 74.0;
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, height), Sense::hover());
 
     if ui.is_rect_visible(rect) {
         let painter = ui.painter_at(rect);
+        let is_hovered = response.hovered();
 
-        // Card surface with subtle top edge highlight (Apple/Linear style lighting)
-        painter.rect_filled(rect, CornerRadius::same(6), colors::PANEL_BG);
+        // Card surface with subtle border
+        painter.rect_filled(rect, CornerRadius::same(8), colors::PANEL_BG);
         painter.rect_stroke(
             rect,
-            CornerRadius::same(6),
-            Stroke::new(1.0, colors::BORDER_SUBTLE),
+            CornerRadius::same(8),
+            Stroke::new(1.0, if is_hovered { colors::BORDER_STRONG } else { colors::BORDER_SUBTLE }),
             egui::StrokeKind::Inside,
         );
 
-        // Top 1px illumination line
-        let top_highlight = [
-            Pos2::new(rect.left() + 6.0, rect.top() + 1.0),
-            Pos2::new(rect.right() - 6.0, rect.top() + 1.0),
-        ];
-        painter.line_segment(
-            top_highlight,
-            Stroke::new(1.0, Color32::from_rgba_premultiplied(0xFF, 0xFF, 0xFF, 0x10)),
-        );
-
-        // Title / Header row
+        // Title row
         painter.text(
-            Pos2::new(rect.left() + 12.0, rect.top() + 10.0),
+            Pos2::new(rect.left() + 14.0, rect.top() + 12.0),
             egui::Align2::LEFT_TOP,
             title.to_uppercase(),
-            egui::FontId::monospace(9.0),
+            egui::FontId::proportional(10.0),
             colors::TEXT_MUTED,
         );
 
-        // Badge if present
+        // Sleek Pill Badge on the right
         if let Some((b_text, b_color)) = badge {
-            let badge_pos = Pos2::new(rect.right() - 12.0, rect.top() + 10.0);
+            let badge_font = egui::FontId::proportional(9.0);
+            let badge_galley = ui.painter().layout_no_wrap(b_text.to_string(), badge_font.clone(), b_color);
+            let badge_w = badge_galley.size().x + 18.0;
+            let badge_h = 17.0;
+            let badge_rect = Rect::from_min_size(
+                Pos2::new(rect.right() - 14.0 - badge_w, rect.top() + 10.0),
+                Vec2::new(badge_w, badge_h),
+            );
+
+            // Translucent pill background
+            painter.rect_filled(
+                badge_rect,
+                CornerRadius::same(8),
+                Color32::from_rgba_unmultiplied(b_color.r(), b_color.g(), b_color.b(), 0x18),
+            );
+            painter.rect_stroke(
+                badge_rect,
+                CornerRadius::same(8),
+                Stroke::new(1.0, Color32::from_rgba_unmultiplied(b_color.r(), b_color.g(), b_color.b(), 0x40)),
+                egui::StrokeKind::Inside,
+            );
+
+            // Clean 2.5px circular status dot
+            let dot_pos = Pos2::new(badge_rect.left() + 7.0, badge_rect.center().y);
+            painter.circle_filled(dot_pos, 2.5, b_color);
+
+            // Badge text
             painter.text(
-                badge_pos,
-                egui::Align2::RIGHT_TOP,
+                Pos2::new(badge_rect.left() + 13.0, badge_rect.center().y),
+                egui::Align2::LEFT_CENTER,
                 b_text,
-                egui::FontId::monospace(9.0),
+                badge_font,
                 b_color,
             );
         }
 
-        // Hero Value & Subtext
+        // Hero Metric Value (Clean sans-serif)
         painter.text(
-            Pos2::new(rect.left() + 12.0, rect.top() + 26.0),
+            Pos2::new(rect.left() + 14.0, rect.top() + 29.0),
             egui::Align2::LEFT_TOP,
             value,
-            egui::FontId::monospace(17.0),
+            egui::FontId::proportional(20.0),
             colors::TEXT_PRIMARY,
         );
 
+        // Contextual Subtext
         painter.text(
-            Pos2::new(rect.left() + 12.0, rect.bottom() - 10.0),
+            Pos2::new(rect.left() + 14.0, rect.bottom() - 11.0),
             egui::Align2::LEFT_BOTTOM,
             subtext,
             egui::FontId::proportional(10.0),
@@ -178,8 +197,9 @@ pub fn modern_slider(
             Pos2::new(rect.right() - 6.0, track_y + track_height / 2.0),
         );
 
-        // Background track
+        // Background groove
         painter.rect_filled(track_rect, CornerRadius::same(2), colors::PANEL_BG_LIGHT);
+        painter.rect_stroke(track_rect, CornerRadius::same(2), Stroke::new(0.5, colors::BORDER_SUBTLE), egui::StrokeKind::Inside);
 
         // Active track segment (Cyan)
         let progress = ((*val - min) / (max - min)).clamp(0.0, 1.0);
@@ -194,11 +214,11 @@ pub fn modern_slider(
         let thumb_x = track_rect.left() + active_width;
         let thumb_pos = Pos2::new(thumb_x, track_y);
 
-        // Glow ring
+        // Clean subtle thumb ring
         painter.circle_filled(
             thumb_pos,
             7.0,
-            Color32::from_rgba_premultiplied(0x00, 0xE5, 0xFF, 0x30),
+            Color32::from_rgba_unmultiplied(0x00, 0xD8, 0xF6, 0x30),
         );
         painter.circle_filled(thumb_pos, 5.0, colors::TEXT_PRIMARY);
         painter.circle_stroke(thumb_pos, 5.0, Stroke::new(1.0, colors::ACCENT_CYAN));
@@ -208,7 +228,6 @@ pub fn modern_slider(
     response.on_hover_ui_at_pointer(|ui| {
         ui.label(
             egui::RichText::new(display_text)
-                .monospace()
                 .size(11.0)
                 .color(colors::ACCENT_CYAN),
         );
@@ -226,7 +245,7 @@ pub fn card_container<R>(
         .fill(colors::PANEL_BG)
         .stroke(Stroke::new(1.0, colors::BORDER_SUBTLE))
         .corner_radius(CornerRadius::same(8))
-        .inner_margin(egui::Margin::symmetric(14, 10))
+        .inner_margin(egui::Margin::symmetric(14, 12))
         .show(ui, add_contents)
 }
 
@@ -244,10 +263,10 @@ pub fn pill_chip(ui: &mut egui::Ui, text: &str, is_active: bool, accent_color: C
     let (rect, response) = ui.allocate_exact_size(size, Sense::click());
     if ui.is_rect_visible(rect) {
         let painter = ui.painter_at(rect);
-        let radius = CornerRadius::same((rect.height() / 2.0) as u8);
+        let radius = CornerRadius::same(6);
 
         let bg = if is_active {
-            Color32::from_rgba_premultiplied(accent_color.r(), accent_color.g(), accent_color.b(), 0x30)
+            Color32::from_rgba_unmultiplied(accent_color.r(), accent_color.g(), accent_color.b(), 0x22)
         } else if response.hovered() {
             colors::PANEL_ELEVATED
         } else {
@@ -285,13 +304,13 @@ pub fn pill_chip(ui: &mut egui::Ui, text: &str, is_active: bool, accent_color: C
     response.clicked()
 }
 
-/// Modern segmented dock tab item.
+/// Modern segmented dock tab item without emojis.
 pub fn segmented_pill_tab(ui: &mut egui::Ui, label: &str, is_active: bool) -> bool {
     let font_id = egui::FontId::proportional(11.0);
     let galley = ui.painter().layout_no_wrap(
         label.to_string(),
         font_id.clone(),
-        colors::TEXT_PRIMARY,
+        if is_active { colors::TEXT_PRIMARY } else { colors::TEXT_MUTED },
     );
     let size = Vec2::new(galley.size().x + 22.0, 26.0);
 
@@ -305,7 +324,7 @@ pub fn segmented_pill_tab(ui: &mut egui::Ui, label: &str, is_active: bool) -> bo
             painter.rect_stroke(
                 rect,
                 radius,
-                Stroke::new(1.0, colors::ACCENT_CYAN_GLOW),
+                Stroke::new(1.0, colors::BORDER_STRONG),
                 egui::StrokeKind::Inside,
             );
             // Crisp bottom accent line
@@ -340,14 +359,14 @@ pub fn segmented_pill_tab(ui: &mut egui::Ui, label: &str, is_active: bool) -> bo
     response.clicked()
 }
 
-/// Compact micro-card control for directional calibration (0.6x to 1.4x).
+/// Interactive 16-axis fader row with real visual track and delta feedback.
 pub fn direction_micro_bar(
     ui: &mut egui::Ui,
     angle_deg: f32,
     mult: &mut f32,
     is_selected: bool,
 ) -> (bool, bool) {
-    let size = Vec2::new(ui.available_width().max(140.0), 22.0);
+    let size = Vec2::new(ui.available_width().max(140.0), 24.0);
     let (rect, response) = ui.allocate_exact_size(size, Sense::click_and_drag());
     let mut selected_clicked = false;
     let mut changed = false;
@@ -386,29 +405,53 @@ pub fn direction_micro_bar(
         painter.rect_filled(rect, radius, bg);
         painter.rect_stroke(rect, radius, Stroke::new(1.0, stroke_color), egui::StrokeKind::Inside);
 
-        // Angle label on the left
-        let angle_text = format!("{:>5.1}°", angle_deg);
+        // Cardinal tag helper
+        let cardinal_tag = match (angle_deg.round() as i32) % 360 {
+            0 => "E",
+            45 => "NE",
+            90 => "N",
+            135 => "NW",
+            180 => "W",
+            225 => "SW",
+            270 => "S",
+            315 => "SE",
+            _ => "",
+        };
+
+        let angle_text = if cardinal_tag.is_empty() {
+            format!("{:>4.1}°", angle_deg)
+        } else {
+            format!("{:>4.1}° {:<2}", angle_deg, cardinal_tag)
+        };
+
         painter.text(
-            Pos2::new(rect.left() + 6.0, rect.center().y),
+            Pos2::new(rect.left() + 8.0, rect.center().y),
             egui::Align2::LEFT_CENTER,
             angle_text,
-            egui::FontId::monospace(9.5),
+            egui::FontId::proportional(9.5),
             if is_selected { colors::ACCENT_CYAN } else { colors::TEXT_MUTED },
         );
 
-        // Center visual delta deviation bar
-        let bar_left = rect.left() + 52.0;
-        let bar_right = rect.right() - 62.0;
+        // Center visual fader groove track
+        let bar_left = rect.left() + 56.0;
+        let bar_right = rect.right() - 68.0;
         let bar_center = (bar_left + bar_right) / 2.0;
         let bar_y = rect.center().y;
+        let groove_h = 3.5;
 
-        // Neutral 1.0 centerline
+        let groove_rect = Rect::from_min_max(
+            Pos2::new(bar_left, bar_y - groove_h / 2.0),
+            Pos2::new(bar_right, bar_y + groove_h / 2.0),
+        );
+        painter.rect_filled(groove_rect, CornerRadius::same(1), colors::PANEL_BG_LIGHT);
+
+        // Neutral 1.0 centerline tick
         painter.line_segment(
-            [Pos2::new(bar_center, bar_y - 4.0), Pos2::new(bar_center, bar_y + 4.0)],
+            [Pos2::new(bar_center, bar_y - 4.5), Pos2::new(bar_center, bar_y + 4.5)],
             Stroke::new(1.0, colors::BORDER_STRONG),
         );
 
-        // Deviation bar
+        // Bidirectional deviation bar
         let deviation = *mult - 1.0; // range -0.40 .. +0.40
         let norm_dev = (deviation / 0.40).clamp(-1.0, 1.0);
         let bar_half_width = (bar_right - bar_left) / 2.0;
@@ -417,12 +460,12 @@ pub fn direction_micro_bar(
         if deviation.abs() > 0.005 {
             let (fill_rect, fill_col) = if deviation > 0.0 {
                 (
-                    Rect::from_min_max(Pos2::new(bar_center, bar_y - 2.0), Pos2::new(fill_x, bar_y + 2.0)),
+                    Rect::from_min_max(Pos2::new(bar_center, bar_y - 1.75), Pos2::new(fill_x, bar_y + 1.75)),
                     colors::ACCENT_CYAN,
                 )
             } else {
                 (
-                    Rect::from_min_max(Pos2::new(fill_x, bar_y - 2.0), Pos2::new(bar_center, bar_y + 2.0)),
+                    Rect::from_min_max(Pos2::new(fill_x, bar_y - 1.75), Pos2::new(bar_center, bar_y + 1.75)),
                     colors::ALERT_AMBER,
                 )
             };
@@ -441,10 +484,10 @@ pub fn direction_micro_bar(
         };
 
         painter.text(
-            Pos2::new(rect.right() - 6.0, rect.center().y),
+            Pos2::new(rect.right() - 8.0, rect.center().y),
             egui::Align2::RIGHT_CENTER,
             val_text,
-            egui::FontId::monospace(9.0),
+            egui::FontId::proportional(9.5),
             val_color,
         );
     }

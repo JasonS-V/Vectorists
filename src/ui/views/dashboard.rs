@@ -16,7 +16,7 @@ pub struct DashboardView {
     pub selected_dir_index: Option<usize>,
     pub sandbox_accumulator: SubpixelAccumulator,
     pub sandbox_trail: Vec<(Pos2, Pos2)>,
-    pub test_cursor: Pos2,
+    pub test_cursor: Option<Pos2>,
     pub last_delta: (i32, i32),
 }
 
@@ -26,7 +26,7 @@ impl Default for DashboardView {
             selected_dir_index: None,
             sandbox_accumulator: SubpixelAccumulator::new(),
             sandbox_trail: Vec::new(),
-            test_cursor: Pos2::new(100.0, 100.0),
+            test_cursor: None,
             last_delta: (0, 0),
         }
     }
@@ -43,7 +43,7 @@ impl DashboardView {
                 let (hz_val, hz_badge, hz_color) = if detected_hz > 0 {
                     (
                         format!("{} Hz", detected_hz),
-                        "● STREAMING",
+                        "STREAMING",
                         colors::SUCCESS_GREEN,
                     )
                 } else {
@@ -80,7 +80,7 @@ impl DashboardView {
                     .unwrap();
 
                 let spread_val = format!("{:+2.0}% / {:+2.0}%", (*max_val - 1.0) * 100.0, (*min_val - 1.0) * 100.0);
-                let spread_sub = format!("Deficit: {:>3.0}° | Overshoot: {:>3.0}°", max_idx as f32 * 22.5, min_idx as f32 * 22.5);
+                let spread_sub = format!("Deficit: {:>3.0}°  ·  Overshoot: {:>3.0}°", max_idx as f32 * 22.5, min_idx as f32 * 22.5);
                 metric_card(
                     ui,
                     card_width,
@@ -103,7 +103,7 @@ impl DashboardView {
                     card_width,
                     "Harmonic Engine",
                     &format!("{:.0}% α", profile.strength * 100.0),
-                    &format!("N=4 Fourier | {} DPI", profile.dpi),
+                    &format!("N=4 Fourier  ·  {} DPI", profile.dpi),
                     Some((status_text, status_color)),
                 );
             });
@@ -119,14 +119,13 @@ impl DashboardView {
                         ui.horizontal(|ui| {
                             ui.label(
                                 egui::RichText::new("360° POLAR RESPONSE MAP")
-                                    .size(11.0)
+                                    .size(10.5)
                                     .strong()
                                     .color(colors::TEXT_PRIMARY),
                             );
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                 ui.label(
                                     egui::RichText::new("HARMONIC N=4")
-                                        .monospace()
                                         .size(9.0)
                                         .color(colors::ACCENT_CYAN),
                                 );
@@ -142,17 +141,17 @@ impl DashboardView {
                             .selected_index(self.selected_dir_index);
                         ui.add(radar);
 
-                        ui.add_space(4.0);
+                        ui.add_space(6.0);
                         ui.separator();
-                        ui.add_space(4.0);
+                        ui.add_space(6.0);
 
-                        // Legend Chips
+                        // Legend Chips (Clean typography, no symbols)
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new("— Baseline").color(colors::BORDER_STRONG).size(9.5));
-                            ui.add_space(4.0);
-                            ui.label(egui::RichText::new("● Raw Anatomy").color(colors::ALERT_AMBER).size(9.5));
-                            ui.add_space(4.0);
-                            ui.label(egui::RichText::new("— Fourier Curve").color(colors::ACCENT_CYAN).size(9.5));
+                            ui.label(egui::RichText::new("Baseline (1.0x)").color(colors::TEXT_FAINT).size(9.5));
+                            ui.add_space(6.0);
+                            ui.label(egui::RichText::new("Raw Anatomy").color(colors::ALERT_AMBER).size(9.5));
+                            ui.add_space(6.0);
+                            ui.label(egui::RichText::new("Fourier Curve").color(colors::ACCENT_CYAN).size(9.5));
                         });
                     });
                 });
@@ -170,7 +169,7 @@ impl DashboardView {
                                 profile.direction_multipliers = [1.0; NUM_DIRECTIONS];
                                 profile.recompute_fourier();
                             }
-                            if pill_chip(ui, "CS2/Val Tactical", false, colors::ACCENT_CYAN) {
+                            if pill_chip(ui, "CS2 / Val Tactical", false, colors::ACCENT_CYAN) {
                                 let p = Profile::preset_tactical_flick();
                                 profile.direction_multipliers = p.direction_multipliers;
                                 profile.recompute_fourier();
@@ -191,7 +190,6 @@ impl DashboardView {
                                 let pct = (profile.strength * 100.0).round() as i32;
                                 ui.label(
                                     egui::RichText::new(format!("{:>3}%", pct))
-                                        .monospace()
                                         .size(11.0)
                                         .color(colors::ACCENT_CYAN),
                                 );
@@ -260,7 +258,7 @@ impl DashboardView {
 
                     ui.add_space(6.0);
 
-                    // Dot-Matrix Live Vector Simulator Canvas
+                    // Live Vector Simulator Canvas
                     card_container(ui, |ui| {
                         ui.horizontal(|ui| {
                             ui.label(egui::RichText::new("LIVE VECTOR SIMULATOR").size(10.5).strong().color(colors::TEXT_PRIMARY));
@@ -269,11 +267,11 @@ impl DashboardView {
                                     self.sandbox_trail.clear();
                                     self.sandbox_accumulator.reset();
                                     self.last_delta = (0, 0);
+                                    self.test_cursor = None;
                                 }
                                 let (dx, dy) = self.last_delta;
                                 ui.label(
-                                    egui::RichText::new(format!("Δx: {:+3}, Δy: {:+3}", dx, dy))
-                                        .monospace()
+                                    egui::RichText::new(format!("Δx: {:+3}  ·  Δy: {:+3}", dx, dy))
                                         .size(9.5)
                                         .color(colors::ACCENT_CYAN),
                                 );
@@ -284,8 +282,8 @@ impl DashboardView {
                         let painter = ui.painter_at(rect);
 
                         // Background surface
-                        painter.rect_filled(rect, CornerRadius::same(4), colors::CHASSIS_BG);
-                        painter.rect_stroke(rect, CornerRadius::same(4), Stroke::new(1.0, colors::BORDER_SUBTLE), egui::StrokeKind::Inside);
+                        painter.rect_filled(rect, CornerRadius::same(6), colors::CHASSIS_BG);
+                        painter.rect_stroke(rect, CornerRadius::same(6), Stroke::new(1.0, colors::BORDER_SUBTLE), egui::StrokeKind::Inside);
 
                         // Dot Matrix Background Grid
                         let dot_spacing = 16.0;
@@ -296,7 +294,7 @@ impl DashboardView {
                                 painter.circle_filled(
                                     Pos2::new(x, y),
                                     1.0,
-                                    Color32::from_rgba_premultiplied(0x1E, 0x22, 0x2E, 0x50),
+                                    Color32::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 12),
                                 );
                                 y += dot_spacing;
                             }
@@ -323,40 +321,42 @@ impl DashboardView {
                                 let (out_dx, out_dy) = self.sandbox_accumulator.apply(corr_dx, corr_dy);
                                 self.last_delta = (out_dx, out_dy);
 
+                                let current_pt = self.test_cursor.unwrap_or(center);
                                 let new_pos = Pos2::new(
-                                    (self.test_cursor.x + out_dx as f32).clamp(rect.left() + 6.0, rect.right() - 6.0),
-                                    (self.test_cursor.y + out_dy as f32).clamp(rect.top() + 6.0, rect.bottom() - 6.0),
+                                    (current_pt.x + out_dx as f32).clamp(rect.left() + 6.0, rect.right() - 6.0),
+                                    (current_pt.y + out_dy as f32).clamp(rect.top() + 6.0, rect.bottom() - 6.0),
                                 );
 
-                                self.sandbox_trail.push((self.test_cursor, new_pos));
+                                self.sandbox_trail.push((current_pt, new_pos));
                                 if self.sandbox_trail.len() > 120 {
                                     self.sandbox_trail.remove(0);
                                 }
-                                self.test_cursor = new_pos;
+                                self.test_cursor = Some(new_pos);
                             }
-                        } else if !rect.contains(self.test_cursor) {
-                            self.test_cursor = center;
                         }
 
-                        // Render glowing particle trail
+                        // Render vector trail
                         for (from, to) in &self.sandbox_trail {
                             painter.line_segment([*from, *to], Stroke::new(1.4, colors::ACCENT_CYAN));
                         }
 
-                        // Current cursor dot with glowing halo
-                        painter.circle_filled(
-                            self.test_cursor,
-                            6.0,
-                            Color32::from_rgba_premultiplied(0xFF, 0xA0, 0x1E, 0x30),
-                        );
-                        painter.circle_filled(self.test_cursor, 3.5, colors::ALERT_AMBER);
-                        painter.circle_stroke(self.test_cursor, 4.0, Stroke::new(1.0, colors::CHASSIS_BG));
+                        // Cursor dot: ONLY drawn if dragged/active, never obstructing the resting hint text!
+                        if let Some(cursor_pt) = self.test_cursor {
+                            painter.circle_filled(
+                                cursor_pt,
+                                5.0,
+                                Color32::from_rgba_unmultiplied(0xF5, 0x9E, 0x0B, 35),
+                            );
+                            painter.circle_filled(cursor_pt, 3.0, colors::ALERT_AMBER);
+                            painter.circle_stroke(cursor_pt, 3.5, Stroke::new(1.0, colors::CHASSIS_BG));
+                        }
 
+                        // Clean instruction hint when idle
                         if !response.dragged() && self.sandbox_trail.is_empty() {
                             painter.text(
                                 center,
                                 egui::Align2::CENTER_CENTER,
-                                "Drag cursor to test sub-pixel compensated vector trail",
+                                "Click and drag to test compensated vector trail",
                                 egui::FontId::proportional(10.5),
                                 colors::TEXT_FAINT,
                             );

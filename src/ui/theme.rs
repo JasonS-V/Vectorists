@@ -1,8 +1,8 @@
 //! Modern Visual Theme and Palette for Vectorists.
 //!
-//! Inspired by modern high-end gaming software and developer utilities
-//! (Linear, Raycast, Wootility), featuring deep obsidian surfaces,
-//! glowing vectorial cyan accents, and strict WCAG AAA typography.
+//! Inspired by high-end precision audio and esports utilities
+//! (Linear, Raycast, SoundID Reference, Wootility), featuring deep obsidian surfaces,
+//! refined vectorial ice-cyan accents, and strict WCAG AAA typography.
 
 use eframe::egui::{self, Color32, CornerRadius, Stroke, Visuals};
 
@@ -10,34 +10,36 @@ use eframe::egui::{self, Color32, CornerRadius, Stroke, Visuals};
 pub mod colors {
     use super::Color32;
 
-    pub const CHASSIS_BG: Color32 = Color32::from_rgb(0x08, 0x09, 0x0C);
-    pub const PANEL_BG: Color32 = Color32::from_rgb(0x10, 0x12, 0x18);
-    pub const PANEL_BG_LIGHT: Color32 = Color32::from_rgb(0x17, 0x1A, 0x24);
-    pub const PANEL_ELEVATED: Color32 = Color32::from_rgb(0x1E, 0x22, 0x2F);
+    pub const CHASSIS_BG: Color32 = Color32::from_rgb(0x0C, 0x0E, 0x14);
+    pub const PANEL_BG: Color32 = Color32::from_rgb(0x13, 0x16, 0x22);
+    pub const PANEL_BG_LIGHT: Color32 = Color32::from_rgb(0x18, 0x1C, 0x2A);
+    pub const PANEL_ELEVATED: Color32 = Color32::from_rgb(0x1F, 0x24, 0x36);
 
-    pub const BORDER_SUBTLE: Color32 = Color32::from_rgb(0x1E, 0x22, 0x2E);
-    pub const BORDER_STRONG: Color32 = Color32::from_rgb(0x2E, 0x35, 0x47);
+    // Exact premultiplied alpha tokens for crisp, artifact-free GPU rendering
+    pub const BORDER_SUBTLE: Color32 = Color32::from_rgba_premultiplied(20, 20, 20, 20); // ~8% white
+    pub const BORDER_STRONG: Color32 = Color32::from_rgba_premultiplied(40, 40, 40, 40); // ~16% white
 
-    pub const TEXT_PRIMARY: Color32 = Color32::from_rgb(0xF5, 0xF6, 0xF8);
-    pub const TEXT_MUTED: Color32 = Color32::from_rgb(0xA2, 0xA8, 0xB8); // Contrast >7.5:1 (AAA)
-    pub const TEXT_FAINT: Color32 = Color32::from_rgb(0x6A, 0x72, 0x86); // Contrast >4.5:1 (AA)
+    pub const TEXT_PRIMARY: Color32 = Color32::from_rgb(0xF8, 0xFA, 0xFC);
+    pub const TEXT_MUTED: Color32 = Color32::from_rgb(0x94, 0xA3, 0xB8); // Contrast >7.5:1 (AAA)
+    pub const TEXT_FAINT: Color32 = Color32::from_rgb(0x64, 0x74, 0x8B); // Contrast >4.5:1 (AA)
 
-    pub const ACCENT_CYAN: Color32 = Color32::from_rgb(0x00, 0xF0, 0xFF);
-    pub const ACCENT_CYAN_HOVER: Color32 = Color32::from_rgb(0x38, 0xF3, 0xFF);
-    pub const ACCENT_CYAN_FAINT: Color32 = Color32::from_rgba_premultiplied(0x00, 0xF0, 0xFF, 0x22);
-    pub const ACCENT_CYAN_GLOW: Color32 = Color32::from_rgba_premultiplied(0x00, 0xF0, 0xFF, 0x40);
+    pub const ACCENT_CYAN: Color32 = Color32::from_rgb(0x00, 0xD8, 0xF6);
+    pub const ACCENT_CYAN_HOVER: Color32 = Color32::from_rgb(0x38, 0xE1, 0xFF);
+    pub const ACCENT_CYAN_FAINT: Color32 = Color32::from_rgba_premultiplied(0, 20, 23, 24);
+    pub const ACCENT_CYAN_GLOW: Color32 = Color32::from_rgba_premultiplied(0, 47, 54, 56);
 
-    pub const ALERT_AMBER: Color32 = Color32::from_rgb(0xFF, 0xA0, 0x1E);
-    pub const ALERT_AMBER_FAINT: Color32 = Color32::from_rgba_premultiplied(0xFF, 0xA0, 0x1E, 0x25);
+    pub const ALERT_AMBER: Color32 = Color32::from_rgb(0xF5, 0x9E, 0x0B);
+    pub const ALERT_AMBER_FAINT: Color32 = Color32::from_rgba_premultiplied(23, 15, 1, 24);
 
-    pub const SUCCESS_GREEN: Color32 = Color32::from_rgb(0x00, 0xE6, 0x76);
+    pub const SUCCESS_GREEN: Color32 = Color32::from_rgb(0x10, 0xB9, 0x81);
+    pub const SUCCESS_GREEN_FAINT: Color32 = Color32::from_rgba_premultiplied(2, 17, 12, 24);
 }
 
 /// Applies the Vectorists modern visuals and system typography to an egui context.
 pub fn apply_theme(ctx: &egui::Context) {
-    // 1. Install modern Windows typography (Segoe UI + Cascadia Mono)
+    // 1. Install modern Windows typography (Segoe UI as primary sans-serif)
     let mut fonts = egui::FontDefinitions::default();
-    
+
     #[cfg(target_os = "windows")]
     {
         if let Ok(font_bytes) = std::fs::read("C:\\Windows\\Fonts\\segoeui.ttf") {
@@ -52,22 +54,23 @@ pub fn apply_theme(ctx: &egui::Context) {
                 .insert(0, "segoeui".to_owned());
         }
 
-        let mono_path = if std::path::Path::new("C:\\Windows\\Fonts\\CascadiaMono.ttf").exists() {
-            "C:\\Windows\\Fonts\\CascadiaMono.ttf"
+        // Install clean monospace only as fallback
+        let mono_path = if std::path::Path::new("C:\\Windows\\Fonts\\segoeui.ttf").exists() {
+            "C:\\Windows\\Fonts\\segoeui.ttf"
         } else {
             "C:\\Windows\\Fonts\\consola.ttf"
         };
 
         if let Ok(mono_bytes) = std::fs::read(mono_path) {
             fonts.font_data.insert(
-                "cascadia_mono".to_owned(),
+                "clean_system".to_owned(),
                 std::sync::Arc::new(egui::FontData::from_owned(mono_bytes)),
             );
             fonts
                 .families
                 .entry(egui::FontFamily::Monospace)
                 .or_default()
-                .insert(0, "cascadia_mono".to_owned());
+                .insert(0, "clean_system".to_owned());
         }
     }
 
@@ -81,33 +84,33 @@ pub fn apply_theme(ctx: &egui::Context) {
     visuals.faint_bg_color = colors::PANEL_BG;
     visuals.extreme_bg_color = colors::CHASSIS_BG;
 
-    // Concentric border radii: 6px outer cards, 4px inner controls
-    visuals.widgets.noninteractive.corner_radius = CornerRadius::same(6);
-    visuals.widgets.inactive.corner_radius = CornerRadius::same(4);
-    visuals.widgets.hovered.corner_radius = CornerRadius::same(4);
-    visuals.widgets.active.corner_radius = CornerRadius::same(4);
-    visuals.widgets.open.corner_radius = CornerRadius::same(4);
+    // Concentric border radii: 8px outer cards, 6px inner controls
+    visuals.widgets.noninteractive.corner_radius = CornerRadius::same(8);
+    visuals.widgets.inactive.corner_radius = CornerRadius::same(6);
+    visuals.widgets.hovered.corner_radius = CornerRadius::same(6);
+    visuals.widgets.active.corner_radius = CornerRadius::same(6);
+    visuals.widgets.open.corner_radius = CornerRadius::same(6);
 
     // Inactive widget styling
     visuals.widgets.inactive.bg_fill = colors::PANEL_BG_LIGHT;
     visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, colors::BORDER_SUBTLE);
     visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, colors::TEXT_PRIMARY);
 
-    // Hovered widget styling (crisp cyan accent edge)
+    // Hovered widget styling (crisp accent edge)
     visuals.widgets.hovered.bg_fill = colors::PANEL_ELEVATED;
-    visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, colors::ACCENT_CYAN);
+    visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, colors::BORDER_STRONG);
     visuals.widgets.hovered.fg_stroke = Stroke::new(1.0, colors::TEXT_PRIMARY);
 
     // Active (pressed) widget styling
     visuals.widgets.active.bg_fill = colors::ACCENT_CYAN_FAINT;
-    visuals.widgets.active.bg_stroke = Stroke::new(1.5, colors::ACCENT_CYAN);
+    visuals.widgets.active.bg_stroke = Stroke::new(1.0, colors::ACCENT_CYAN);
     visuals.widgets.active.fg_stroke = Stroke::new(1.0, colors::ACCENT_CYAN);
 
     // Focus & selection indicators
     visuals.selection.bg_fill = colors::ACCENT_CYAN_FAINT;
-    visuals.selection.stroke = Stroke::new(1.5, colors::ACCENT_CYAN);
+    visuals.selection.stroke = Stroke::new(1.0, colors::ACCENT_CYAN);
 
-    // Crisp, subtle borders
+    // Crisp, subtle borders on containers
     visuals.widgets.noninteractive.bg_fill = colors::PANEL_BG;
     visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0, colors::BORDER_SUBTLE);
     visuals.widgets.noninteractive.fg_stroke = Stroke::new(1.0, colors::TEXT_MUTED);
