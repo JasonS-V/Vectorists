@@ -4,7 +4,7 @@ use crate::core::profile::ProfileManager;
 use crate::input::RawInputListener;
 use crate::ui::theme::{apply_theme, colors};
 use crate::ui::views::{CalibratorView, DashboardView, SettingsView};
-use crate::ui::widgets::toggle_switch;
+use crate::ui::widgets::{segmented_pill_tab, toggle_switch};
 use eframe::egui::{self, Frame, Stroke};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -86,12 +86,7 @@ impl eframe::App for VectoristsApp {
 
                         for (tab, label) in tabs {
                             let is_active = self.active_tab == tab;
-                            let btn_text = egui::RichText::new(label)
-                                .size(10.5)
-                                .strong()
-                                .color(if is_active { colors::ACCENT_CYAN } else { colors::TEXT_MUTED });
-
-                            if ui.selectable_label(is_active, btn_text).clicked() {
+                            if segmented_pill_tab(ui, label, is_active) {
                                 self.active_tab = tab;
                             }
                         }

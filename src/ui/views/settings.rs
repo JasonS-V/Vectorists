@@ -2,6 +2,7 @@
 
 use crate::core::profile::{Profile, ProfileManager};
 use crate::ui::theme::colors;
+use crate::ui::widgets::{card_container, pill_chip};
 use eframe::egui;
 
 pub struct SettingsView {
@@ -53,9 +54,9 @@ impl SettingsView {
             ui.horizontal(|ui| {
                 // Left Column: Profile Selector & Presets
                 ui.vertical(|ui| {
-                    ui.group(|ui| {
+                    card_container(ui, |ui| {
                         ui.set_width(280.0);
-                        ui.label(egui::RichText::new("AVAILABLE PROFILES").size(10.5).color(colors::TEXT_PRIMARY));
+                        ui.label(egui::RichText::new("AVAILABLE PROFILES").size(10.5).strong().color(colors::TEXT_PRIMARY));
                         ui.separator();
 
                         let mut switch_to_id = None;
@@ -89,7 +90,7 @@ impl SettingsView {
                         // Add new profile
                         ui.horizontal(|ui| {
                             ui.text_edit_singleline(&mut self.new_profile_name);
-                            if ui.button(egui::RichText::new("Add").size(9.5)).clicked() {
+                            if pill_chip(ui, "+ Add", false, colors::ACCENT_CYAN) {
                                 if !self.new_profile_name.trim().is_empty() {
                                     let new_id = format!("custom-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
                                     let mut p = Profile::default();
@@ -103,18 +104,18 @@ impl SettingsView {
                             }
                         });
 
-                        ui.add_space(4.0);
+                        ui.add_space(6.0);
 
                         // Presets buttons
                         ui.label(egui::RichText::new("Factory Presets:").size(10.0).color(colors::TEXT_MUTED));
                         ui.horizontal(|ui| {
-                            if ui.button(egui::RichText::new("+ CS2/Val Tactical").size(9.0)).clicked() {
+                            if pill_chip(ui, "+ Tactical Flick", false, colors::ACCENT_CYAN) {
                                 let p = Profile::preset_tactical_flick();
                                 manager.add_profile(p.clone());
                                 manager.set_active_profile(&p.id);
                                 self.status_message = Some(("CS2/Valorant Tactical preset loaded.".to_string(), false));
                             }
-                            if ui.button(egui::RichText::new("+ Apex Tracking").size(9.0)).clicked() {
+                            if pill_chip(ui, "+ Apex Smooth", false, colors::SUCCESS_GREEN) {
                                 let p = Profile::preset_tracking_smooth();
                                 manager.add_profile(p.clone());
                                 manager.set_active_profile(&p.id);
@@ -130,8 +131,8 @@ impl SettingsView {
                 ui.vertical(|ui| {
                     let active = manager.active_profile_mut();
 
-                    ui.group(|ui| {
-                        ui.label(egui::RichText::new("HARDWARE SENSOR PARAMETERS").size(10.5).color(colors::TEXT_PRIMARY));
+                    card_container(ui, |ui| {
+                        ui.label(egui::RichText::new("HARDWARE SENSOR PARAMETERS").size(10.5).strong().color(colors::TEXT_PRIMARY));
                         ui.separator();
 
                         ui.horizontal(|ui| {
@@ -145,7 +146,7 @@ impl SettingsView {
                             ui.label(egui::RichText::new("Sensor Base DPI:").size(11.0).color(colors::TEXT_MUTED));
                             let dpis = [400, 800, 1600, 3200];
                             for d in dpis {
-                                if ui.selectable_label(active.dpi == d, format!("{}", d)).clicked() {
+                                if pill_chip(ui, &format!("{}", d), active.dpi == d, colors::ACCENT_CYAN) {
                                     active.dpi = d;
                                 }
                             }
@@ -157,18 +158,18 @@ impl SettingsView {
                             ui.label(egui::RichText::new("Polling Frequency:").size(11.0).color(colors::TEXT_MUTED));
                             let rates = [1000, 2000, 4000, 8000];
                             for r in rates {
-                                if ui.selectable_label(active.polling_rate_hz == r, format!("{} Hz", r)).clicked() {
+                                if pill_chip(ui, &format!("{} Hz", r), active.polling_rate_hz == r, colors::ACCENT_CYAN) {
                                     active.polling_rate_hz = r;
                                 }
                             }
                         });
                     });
 
-                    ui.add_space(8.0);
+                    ui.add_space(6.0);
 
                     // Driver Interop & Export
-                    ui.group(|ui| {
-                        ui.label(egui::RichText::new("DRIVER INTEROP & HARDWARE EXPORT").size(10.5).color(colors::TEXT_PRIMARY));
+                    card_container(ui, |ui| {
+                        ui.label(egui::RichText::new("DRIVER INTEROP & HARDWARE EXPORT").size(10.5).strong().color(colors::TEXT_PRIMARY));
                         ui.separator();
 
                         ui.label(
@@ -182,7 +183,7 @@ impl SettingsView {
                         ui.add_space(6.0);
 
                         ui.horizontal(|ui| {
-                            if ui.button(egui::RichText::new("Export to RawAccel (settings.json)").strong().color(colors::ACCENT_CYAN)).clicked() {
+                            if pill_chip(ui, "Export to RawAccel (.json)", false, colors::ACCENT_CYAN) {
                                 match active.export_rawaccel_json() {
                                     Ok(json_str) => {
                                         let filename = format!("rawaccel_{}.json", active.id);
@@ -201,7 +202,7 @@ impl SettingsView {
                                 }
                             }
 
-                            if ui.button(egui::RichText::new("Export 360° LUT Table (CSV)").color(colors::TEXT_PRIMARY)).clicked() {
+                            if pill_chip(ui, "Export 360° LUT Table (.csv)", false, colors::TEXT_PRIMARY) {
                                 let csv_str = active.export_polar_lut_csv();
                                 let filename = format!("lut_{}.csv", active.id);
                                 match std::fs::write(&filename, csv_str) {
@@ -216,10 +217,10 @@ impl SettingsView {
                         });
                     });
 
-                    ui.add_space(8.0);
+                    ui.add_space(6.0);
 
                     // Engine Metadata & Credits Card
-                    ui.group(|ui| {
+                    card_container(ui, |ui| {
                         ui.horizontal(|ui| {
                             ui.label(egui::RichText::new("Vectorists v0.1.0").monospace().size(10.0).color(colors::TEXT_MUTED));
                             ui.label(egui::RichText::new("•").size(10.0).color(colors::BORDER_STRONG));

@@ -6,7 +6,10 @@
 use crate::core::accumulator::SubpixelAccumulator;
 use crate::core::profile::{NUM_DIRECTIONS, Profile};
 use crate::ui::theme::colors;
-use crate::ui::widgets::{metric_card, modern_slider, PolarRadarWidget};
+use crate::ui::widgets::{
+    card_container, direction_micro_bar, metric_card, modern_slider, pill_chip,
+    PolarRadarWidget,
+};
 use eframe::egui::{self, Color32, CornerRadius, Pos2, Sense, Stroke, Vec2};
 
 pub struct DashboardView {
@@ -111,7 +114,7 @@ impl DashboardView {
             ui.horizontal(|ui| {
                 // Left Column: Tactical Polar Radar
                 ui.vertical(|ui| {
-                    ui.group(|ui| {
+                    card_container(ui, |ui| {
                         ui.set_width(330.0);
                         ui.horizontal(|ui| {
                             ui.label(
@@ -130,14 +133,18 @@ impl DashboardView {
                             });
                         });
 
+                        ui.add_space(4.0);
                         ui.separator();
+                        ui.add_space(4.0);
 
                         let radar = PolarRadarWidget::new(profile)
                             .size(Vec2::new(310.0, 310.0))
                             .selected_index(self.selected_dir_index);
                         ui.add(radar);
 
+                        ui.add_space(4.0);
                         ui.separator();
+                        ui.add_space(4.0);
 
                         // Legend Chips
                         ui.horizontal(|ui| {
@@ -155,26 +162,27 @@ impl DashboardView {
                 // Right Column: Presets, Fine Tuning, and Vector Simulator
                 ui.vertical(|ui| {
                     // Profile & Presets Bar
-                    ui.group(|ui| {
+                    card_container(ui, |ui| {
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new("PRESETS:").size(10.0).color(colors::TEXT_MUTED));
-                            if ui.button(egui::RichText::new("1:1 Neutral").size(10.0)).clicked() {
+                            ui.label(egui::RichText::new("PRESETS").size(10.0).strong().color(colors::TEXT_MUTED));
+                            ui.add_space(6.0);
+                            if pill_chip(ui, "1:1 Neutral", false, colors::TEXT_PRIMARY) {
                                 profile.direction_multipliers = [1.0; NUM_DIRECTIONS];
                                 profile.recompute_fourier();
                             }
-                            if ui.button(egui::RichText::new("CS2/Val Tactical").size(10.0).color(colors::ACCENT_CYAN)).clicked() {
+                            if pill_chip(ui, "CS2/Val Tactical", false, colors::ACCENT_CYAN) {
                                 let p = Profile::preset_tactical_flick();
                                 profile.direction_multipliers = p.direction_multipliers;
                                 profile.recompute_fourier();
                             }
-                            if ui.button(egui::RichText::new("Apex Tracking").size(10.0).color(colors::SUCCESS_GREEN)).clicked() {
+                            if pill_chip(ui, "Apex Tracking", false, colors::SUCCESS_GREEN) {
                                 let p = Profile::preset_tracking_smooth();
                                 profile.direction_multipliers = p.direction_multipliers;
                                 profile.recompute_fourier();
                             }
                         });
 
-                        ui.add_space(4.0);
+                        ui.add_space(6.0);
 
                         // Modern Strength Slider
                         ui.horizontal(|ui| {
@@ -205,76 +213,59 @@ impl DashboardView {
                     ui.add_space(4.0);
 
                     // Manual 16-Axis Tuner
-                    ui.group(|ui| {
+                    card_container(ui, |ui| {
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new("MANUAL 16-AXIS CALIBRATION").size(10.5).color(colors::TEXT_PRIMARY));
+                            ui.label(egui::RichText::new("MANUAL 16-AXIS CALIBRATION").size(10.5).strong().color(colors::TEXT_PRIMARY));
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if ui.button(egui::RichText::new("Reset").size(9.0)).clicked() {
+                                if pill_chip(ui, "Reset 1.0x", false, colors::ALERT_AMBER) {
                                     profile.direction_multipliers = [1.0; NUM_DIRECTIONS];
                                     profile.recompute_fourier();
                                 }
                             });
                         });
 
-                        ui.add_space(2.0);
+                        ui.add_space(4.0);
 
-                        egui::ScrollArea::vertical().max_height(115.0).show(ui, |ui| {
-                            egui::Grid::new("directions_grid")
-                                .num_columns(4)
-                                .spacing([6.0, 3.0])
-                                .striped(true)
-                                .show(ui, |ui| {
-                                    for i in 0..NUM_DIRECTIONS {
-                                        let angle_deg = i as f32 * 22.5;
-                                        let is_selected = self.selected_dir_index == Some(i);
-
-                                        let label = egui::RichText::new(format!("{:>5.1}°", angle_deg))
-                                            .monospace()
-                                            .size(9.5)
-                                            .color(if is_selected {
-                                                colors::ACCENT_CYAN
-                                            } else {
-                                                colors::TEXT_MUTED
-                                            });
-
-                                        if ui.selectable_label(is_selected, label).clicked() {
-                                            self.selected_dir_index = if is_selected { None } else { Some(i) };
-                                        }
-
-                                        let mut mult = profile.direction_multipliers[i];
-                                        let slider = egui::Slider::new(&mut mult, 0.6..=1.4).show_value(false);
-
-                                        if ui.add(slider).changed() {
-                                            profile.direction_multipliers[i] = mult;
-                                            profile.recompute_fourier();
-                                        }
-
-                                        let delta_pct = (mult - 1.0) * 100.0;
-                                        ui.label(
-                                            egui::RichText::new(format!("{:>4.2}x ({:+3.0}%)", mult, delta_pct))
-                                                .monospace()
-                                                .size(9.0)
-                                                .color(if delta_pct >= 0.0 {
-                                                    colors::ACCENT_CYAN
-                                                } else {
-                                                    colors::ALERT_AMBER
-                                                }),
-                                        );
-
-                                        ui.end_row();
+                        egui::ScrollArea::vertical().max_height(125.0).show(ui, |ui| {
+                            ui.columns(2, |cols| {
+                                for i in 0..8 {
+                                    let angle_deg = i as f32 * 22.5;
+                                    let is_sel = self.selected_dir_index == Some(i);
+                                    let mut mult = profile.direction_multipliers[i];
+                                    let (clicked, changed) = direction_micro_bar(&mut cols[0], angle_deg, &mut mult, is_sel);
+                                    if clicked {
+                                        self.selected_dir_index = if is_sel { None } else { Some(i) };
                                     }
-                                });
+                                    if changed {
+                                        profile.direction_multipliers[i] = mult;
+                                        profile.recompute_fourier();
+                                    }
+                                }
+                                for i in 8..16 {
+                                    let angle_deg = i as f32 * 22.5;
+                                    let is_sel = self.selected_dir_index == Some(i);
+                                    let mut mult = profile.direction_multipliers[i];
+                                    let (clicked, changed) = direction_micro_bar(&mut cols[1], angle_deg, &mut mult, is_sel);
+                                    if clicked {
+                                        self.selected_dir_index = if is_sel { None } else { Some(i) };
+                                    }
+                                    if changed {
+                                        profile.direction_multipliers[i] = mult;
+                                        profile.recompute_fourier();
+                                    }
+                                }
+                            });
                         });
                     });
 
-                    ui.add_space(4.0);
+                    ui.add_space(6.0);
 
                     // Dot-Matrix Live Vector Simulator Canvas
-                    ui.group(|ui| {
+                    card_container(ui, |ui| {
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new("LIVE VECTOR SIMULATOR").size(10.5).color(colors::TEXT_PRIMARY));
+                            ui.label(egui::RichText::new("LIVE VECTOR SIMULATOR").size(10.5).strong().color(colors::TEXT_PRIMARY));
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if ui.button(egui::RichText::new("Clear").size(9.0)).clicked() {
+                                if pill_chip(ui, "Clear Trail", false, colors::TEXT_MUTED) {
                                     self.sandbox_trail.clear();
                                     self.sandbox_accumulator.reset();
                                     self.last_delta = (0, 0);

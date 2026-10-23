@@ -33,8 +33,46 @@ pub mod colors {
     pub const SUCCESS_GREEN: Color32 = Color32::from_rgb(0x00, 0xE6, 0x76);
 }
 
-/// Applies the Vectorists modern visuals to an egui context.
+/// Applies the Vectorists modern visuals and system typography to an egui context.
 pub fn apply_theme(ctx: &egui::Context) {
+    // 1. Install modern Windows typography (Segoe UI + Cascadia Mono)
+    let mut fonts = egui::FontDefinitions::default();
+    
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(font_bytes) = std::fs::read("C:\\Windows\\Fonts\\segoeui.ttf") {
+            fonts.font_data.insert(
+                "segoeui".to_owned(),
+                std::sync::Arc::new(egui::FontData::from_owned(font_bytes)),
+            );
+            fonts
+                .families
+                .entry(egui::FontFamily::Proportional)
+                .or_default()
+                .insert(0, "segoeui".to_owned());
+        }
+
+        let mono_path = if std::path::Path::new("C:\\Windows\\Fonts\\CascadiaMono.ttf").exists() {
+            "C:\\Windows\\Fonts\\CascadiaMono.ttf"
+        } else {
+            "C:\\Windows\\Fonts\\consola.ttf"
+        };
+
+        if let Ok(mono_bytes) = std::fs::read(mono_path) {
+            fonts.font_data.insert(
+                "cascadia_mono".to_owned(),
+                std::sync::Arc::new(egui::FontData::from_owned(mono_bytes)),
+            );
+            fonts
+                .families
+                .entry(egui::FontFamily::Monospace)
+                .or_default()
+                .insert(0, "cascadia_mono".to_owned());
+        }
+    }
+
+    ctx.set_fonts(fonts);
+
     let mut visuals = Visuals::dark();
 
     visuals.override_text_color = Some(colors::TEXT_PRIMARY);

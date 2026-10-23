@@ -7,6 +7,7 @@
 use crate::core::math::TWO_PI;
 use crate::core::profile::{NUM_DIRECTIONS, Profile};
 use crate::ui::theme::colors;
+use crate::ui::widgets::pill_chip;
 use eframe::egui::{self, Color32, Pos2, Sense, Stroke, Vec2};
 use std::time::Instant;
 
@@ -79,22 +80,22 @@ impl CalibratorView {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     match self.state {
                         CalibratorState::Idle => {
-                            if ui.button(egui::RichText::new("Start Calibration (16 Axes)").strong().color(colors::ACCENT_CYAN)).clicked() {
+                            if pill_chip(ui, "▶ Start Calibration (16 Axes)", true, colors::ACCENT_CYAN) {
                                 self.start_calibration();
                             }
                         }
                         CalibratorState::Completed => {
-                            if ui.button(egui::RichText::new("Apply to Active Profile").strong().color(colors::ACCENT_CYAN)).clicked() {
+                            if pill_chip(ui, "✔ Apply to Active Profile", true, colors::ACCENT_CYAN) {
                                 profile.direction_multipliers = self.measured_multipliers;
                                 profile.recompute_fourier();
                                 self.last_feedback = Some("Profile successfully calibrated and updated.".to_string());
                             }
-                            if ui.button(egui::RichText::new("Retest").color(colors::TEXT_MUTED)).clicked() {
+                            if pill_chip(ui, "↻ Retest", false, colors::TEXT_MUTED) {
                                 self.start_calibration();
                             }
                         }
                         _ => {
-                            if ui.button(egui::RichText::new("Abort Test").color(colors::ALERT_AMBER)).clicked() {
+                            if pill_chip(ui, "✖ Abort Test", false, colors::ALERT_AMBER) {
                                 self.state = CalibratorState::Idle;
                                 self.last_feedback = Some("Calibration aborted by user.".to_string());
                             }
